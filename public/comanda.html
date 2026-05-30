@@ -9,7 +9,7 @@
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--marrom:#3B2314;--marrom-mid:#5C3D2E;--bege:#F5F0E8;--bege-card:#FFFDF9;--verde:#2D7A4F;--vermelho:#C0392B;--texto:#1A1208;--texto-sub:#7A6855;--borda:#E2D9CC}
     body{font-family:'DM Sans',sans-serif;background:var(--bege);min-height:100vh;padding-bottom:80px}
-    .header{background:var(--marrom);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+    .header{background:var(--marrom);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;position:relative}
     .header-esq{display:flex;align-items:center;gap:10px}
     .btn-icon{background:none;border:none;color:var(--bege);cursor:pointer;padding:4px;opacity:.85;display:flex;align-items:center}
     .btn-icon:hover{opacity:1}
@@ -74,10 +74,12 @@
         <div class="header-sub" id="h-sub">—</div>
       </div>
     </div>
-    <div class="header-dir">
+    <div style="position:absolute;left:50%;transform:translateX(-50%)">
       <button class="btn-icon" onclick="window.location.href='home.html'" title="Início">
         <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </button>
+    </div>
+    <div class="header-dir">
       <button class="btn-fechar" onclick="irParaCaixa()">Fechar comanda</button>
     </div>
   </div>
@@ -119,7 +121,8 @@
 
     let itemParaRemover=null,itensAtual=[],categoriaMap={},qtdMap={};
     const canais={salao:'Salão',balcao:'Balcão',delivery:'Delivery',calcada:'Calçada'};
-    const cod5=c=>c?String(c).slice(-5).padStart(5,'0'):'';
+    const cod4=c=>c?String(c).slice(-4).padStart(4,'0'):'';
+    const cod4=c=>c?String(c).slice(-4).padStart(4,'0'):'';
     const fmt=v=>(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 
     onAuthStateChanged(auth,(user)=>{
@@ -157,8 +160,7 @@
       el.innerHTML=itensAtual.map(item=>`
         <div class="item-lancado">
           <div class="il-esq">
-            ${item.codigoProduto?`<div class="il-codigo">${cod5(item.codigoProduto)}</div>`:''}
-            <div class="il-nome">${item.nomeProduto}</div>
+            <div class="il-nome"><span style="font-variant-numeric:tabular-nums;font-family:monospace;font-size:11px;color:var(--texto-sub);margin-right:6px">${cod4(item.codigoProduto)}</span>${item.nomeProduto}</div>
             <div class="il-sub">${item.quantidade} un × ${fmt(item.precoProduto)}${item.observacao?' · '+item.observacao:''}</div>
           </div>
           <div class="il-dir">
@@ -191,8 +193,7 @@
             ${prods.map(p=>{qtdMap[p.id]=0;return`
               <div class="prod-item">
                 <div class="pi-esq">
-                  <div class="pi-codigo">${cod5(p.codigo)}</div>
-                  <div class="pi-nome">${p.nome}</div>
+                  <div class="pi-nome"><span style="font-variant-numeric:tabular-nums;font-family:monospace;font-size:11px;color:var(--texto-sub);margin-right:6px">${cod4(p.codigo)}</span>${p.nome}</div>
                   <div class="pi-preco">${fmt(p.preco)} / ${p.unidade||'un'}</div>
                 </div>
                 <div class="pi-ctrl">

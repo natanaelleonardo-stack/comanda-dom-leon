@@ -9,7 +9,7 @@
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--marrom:#3B2314;--marrom-mid:#5C3D2E;--bege:#F5F0E8;--bege-card:#FFFDF9;--verde:#2D7A4F;--amarelo:#B8860B;--vermelho:#C0392B;--texto:#1A1208;--texto-sub:#7A6855;--borda:#E2D9CC}
     body{font-family:'DM Sans',sans-serif;background:var(--bege);min-height:100vh;padding-bottom:32px}
-    .header{background:var(--marrom);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+    .header{background:var(--marrom);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;position:relative}
     .header-esq{display:flex;align-items:center;gap:10px}
     .header-logo{width:36px;height:36px;border-radius:50%;object-fit:contain;background:var(--bege);padding:2px}
     .header-titulo{color:var(--bege);font-size:14px;font-weight:500}
@@ -80,11 +80,13 @@
         <div class="header-sub" id="header-sub">Carregando...</div>
       </div>
     </div>
-    <div class="header-dir">
-      <div class="status-dot" title="Online"></div>
+    <div class="header-dir" style="position:absolute;left:50%;transform:translateX(-50%)">
       <button class="btn-icon" onclick="window.location.href='home.html'" title="Início">
         <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </button>
+    </div>
+    <div class="header-dir">
+      <div class="status-dot" title="Online"></div>
       <button class="btn-icon" title="Sair" onclick="sair()">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
@@ -111,6 +113,7 @@
       <button class="filtro" data-canal="balcao" onclick="filtrar(this)">Balcão</button>
       <button class="filtro" data-canal="delivery" onclick="filtrar(this)">Delivery</button>
       <button class="filtro" data-canal="calcada" onclick="filtrar(this)">Calçada</button>
+      <button class="filtro" data-canal="fechadas" onclick="filtrar(this)" style="margin-left:auto">Fechadas</button>
     </div>
   </div>
 
@@ -163,7 +166,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, doc, getDoc }
+    import { getFirestore, collection, query, where, onSnapshot, addDoc, deleteDoc, getDocs, serverTimestamp, doc, getDoc }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = { apiKey:"AIzaSyCuDpg9yufiKQ_p_KDR2PcY32K8Xh0H_nM", authDomain:"comandas-89c57.firebaseapp.com", projectId:"comandas-89c57", storageBucket:"comandas-89c57.firebasestorage.app", messagingSenderId:"885510017154", appId:"1:885510027154:web:2c7df4579fe5396de5649b" };
@@ -203,6 +206,7 @@
       const filtradas=canalAtivo==='todos'?todasComandas:todasComandas.filter(c=>c.canal===canalAtivo);
       if (filtradas.length===0) { lista.innerHTML='<div class="vazio">Nenhuma comanda aberta</div>'; return; }
       const canais={salao:'Salão',balcao:'Balcão',delivery:'Delivery',calcada:'Calçada'};
+    const cod4=c=>c?String(c).slice(-4).padStart(4,'0'):'';
       const isGerente=perfilAtual==='gerente';
       lista.innerHTML=filtradas.map(c=>{
         const mins=c.abertaEm?Math.floor((Date.now()-c.abertaEm.seconds*1000)/60000):0;
@@ -228,7 +232,34 @@
       }).join('');
     }
 
-    window.filtrar=function(btn){ document.querySelectorAll('.filtro').forEach(b=>b.classList.remove('ativo')); btn.classList.add('ativo'); canalAtivo=btn.dataset.canal; renderLista(); };
+    window.filtrar=function(btn){
+      document.querySelectorAll('.filtro').forEach(b=>b.classList.remove('ativo'));
+      btn.classList.add('ativo'); canalAtivo=btn.dataset.canal;
+      if(canalAtivo==='fechadas') carregarFechadas(); else renderLista();
+    };
+    async function carregarFechadas(){
+      const lista=document.getElementById('lista');
+      lista.innerHTML='<div class="loading-wrap">Carregando...</div>';
+      const hoje=new Date(); hoje.setHours(0,0,0,0);
+      const snap=await getDocs(query(collection(db,'comandas'),where('status','==','fechada'),where('fechadaEm','>=',hoje)));
+      const fechadas=snap.docs.map(d=>({id:d.id,...d.data()}));
+      fechadas.sort((a,b)=>(b.fechadaEm?.seconds||0)-(a.fechadaEm?.seconds||0));
+      if(fechadas.length===0){lista.innerHTML='<div class="vazio">Nenhuma comanda fechada hoje</div>';return;}
+      const canaisNome={salao:'Salão',balcao:'Balcão',delivery:'Delivery',calcada:'Calçada'};
+      lista.innerHTML=fechadas.map(c=>{
+        const total=(c.total||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        return `<div class="item" style="border-left-color:var(--texto-sub);opacity:.8">
+          <div class="item-esq">
+            <div class="item-titulo">${c.identificacao}</div>
+            <div class="item-sub">${canaisNome[c.canal]||c.canal} · ${c.qtdItens||0} itens</div>
+          </div>
+          <div class="item-dir">
+            <div class="item-total">${total}</div>
+            <span class="badge" style="background:#F1EFE8;color:#7A6855">Fechada</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
     window.abrirComanda=function(id){ window.location.href='comanda.html?id='+id; };
     window.abrirModal=function(){ document.getElementById('modal-bg').classList.add('visivel'); document.getElementById('m-id').focus(); };
     window.fecharModal=function(){ document.getElementById('modal-bg').classList.remove('visivel'); document.getElementById('m-id').value=''; };
