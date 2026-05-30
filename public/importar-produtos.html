@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Importar Produtos · Dom Leon</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --marrom: #3B2314; --bege: #F5F0E8; --bege-card: #FFFDF9; --verde: #2D7A4F; --vermelho: #C0392B; --texto: #1A1208; --texto-sub: #7A6855; --borda: #E2D9CC; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bege); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .card { background: var(--bege-card); border-radius: 20px; padding: 32px; width: 100%; max-width: 500px; border: 1px solid var(--borda); }
+    h2 { font-size: 18px; font-weight: 500; color: var(--marrom); margin-bottom: 6px; }
+    p  { font-size: 13px; color: var(--texto-sub); margin-bottom: 24px; }
+    .btn { width: 100%; padding: 14px; background: var(--marrom); color: var(--bege); border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.88; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .log { margin-top: 20px; background: var(--bege); border-radius: 10px; border: 1px solid var(--borda); padding: 14px; font-size: 12px; color: var(--texto-sub); max-height: 300px; overflow-y: auto; display: none; }
+    .log.visivel { display: block; }
+    .log-linha { padding: 3px 0; border-bottom: 1px solid var(--borda); }
+    .log-linha.ok  { color: var(--verde); }
+    .log-linha.err { color: var(--vermelho); }
+    .log-linha.inf { color: var(--texto-sub); }
+    .resumo { margin-top: 16px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--borda); background: #E8F5EE; color: var(--verde); font-size: 13px; font-weight: 500; display: none; text-align: center; }
+    .resumo.visivel { display: block; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h2>Importar Produtos — Dom Leon</h2>
+  <p>Clique no botão abaixo para importar os 29 pastéis (26 salgados + 3 doces) direto no Firestore. Execute apenas uma vez.</p>
+  <button class="btn" id="btn-importar" onclick="importar()">Iniciar importação</button>
+  <div class="log" id="log"></div>
+  <div class="resumo" id="resumo"></div>
+</div>
+
+<script type="module">
+  import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCuDpg9yufiKQ_p_KDR2PcY32K8Xh0H_nM",
+    authDomain: "comandas-89c57.firebaseapp.com",
+    projectId: "comandas-89c57",
+    storageBucket: "comandas-89c57.firebasestorage.app",
+    messagingSenderId: "885510017154",
+    appId: "1:885510017154:web:2c7df4579fe5396de5649b"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  const CATEGORIAS = [
+    { nome: 'Pastel',       ordem: 1 },
+    { nome: 'Pastel Doce',  ordem: 2 }
+  ];
+
+  const PRODUTOS = [
+    { codigo: '0000000000000301', nome: 'Pastel carne',                  preco: 13.00, cat: 'Pastel' },
+    { codigo: '0000000000000302', nome: 'Pastel carne c/ queijo',         preco: 13.00, cat: 'Pastel' },
+    { codigo: '0000000000000303', nome: 'Pastel queijo',                  preco: 13.00, cat: 'Pastel' },
+    { codigo: '0000000000000304', nome: 'Pastel frango',                  preco: 13.00, cat: 'Pastel' },
+    { codigo: '0000000000000305', nome: 'Pastel frango c/ queijo',        preco: 13.00, cat: 'Pastel' },
+    { codigo: '0000000000000306', nome: 'Pastel presunto e queijo',       preco: 14.00, cat: 'Pastel' },
+    { codigo: '0000000000000307', nome: 'Pastel calabresa c/ queijo',     preco: 13.00, cat: 'Pastel' },
+    { codigo: '0000000000000308', nome: 'Pastel carne c/ requeijão',      preco: 14.00, cat: 'Pastel' },
+    { codigo: '0000000000000309', nome: 'Pastel carne c/ azeitona',       preco: 13.00, cat: 'Pastel' },
+    { codigo: '0000000000000310', nome: 'Pastel carne c/ bacon',          preco: 14.00, cat: 'Pastel' },
+    { codigo: '0000000000000311', nome: 'Pastel carne c/ cheddar',        preco: 13.00, cat: 'Pastel' },
+    { codigo: '0000000000000312', nome: 'Pastel frango c/ requeijão',     preco: 14.00, cat: 'Pastel' },
+    { codigo: '0000000000000313', nome: 'Pastel frango c/ cheddar',       preco: 14.00, cat: 'Pastel' },
+    { codigo: '0000000000000314', nome: 'Pastel frango c/ milho',         preco: 14.00, cat: 'Pastel' },
+    { codigo: '0000000000000315', nome: 'Pastel frango c/ bacon',         preco: 14.00, cat: 'Pastel' },
+    { codigo: '0000000000000316', nome: 'Pastel frango c/ catupiry',      preco: 14.00, cat: 'Pastel' },
+    { codigo: '0000000000000317', nome: 'Pastel queijo c/ azeitona',      preco: 13.00, cat: 'Pastel' },
+    { codigo: '0000000000000318', nome: 'Pastel queijo c/ milho',         preco: 13.00, cat: 'Pastel' },
+    { codigo: '0000000000000319', nome: 'Pastel queijo c/ bacon',         preco: 14.00, cat: 'Pastel' },
+    { codigo: '0000000000000320', nome: 'Pastel 2 queijo',                preco: 15.00, cat: 'Pastel' },
+    { codigo: '0000000000000321', nome: 'Pastel 3 queijo',                preco: 19.00, cat: 'Pastel' },
+    { codigo: '0000000000000322', nome: 'Pastel calabresa',               preco: 13.00, cat: 'Pastel' },
+    { codigo: '0000000000000323', nome: 'Pastel calabresa c/ requeijão',  preco: 14.00, cat: 'Pastel' },
+    { codigo: '0000000000000324', nome: 'Pastel calabresa c/ catupiry',   preco: 14.00, cat: 'Pastel' },
+    { codigo: '0000000000000325', nome: 'Pastel pizza',                   preco: 14.00, cat: 'Pastel' },
+    { codigo: '0000000000000326', nome: 'Pastel banana c/ canela',        preco: 17.00, cat: 'Pastel' },
+    { codigo: '0000000000000327', nome: 'Pastel doce de leite',           preco: 17.00, cat: 'Pastel Doce' },
+    { codigo: '0000000000000328', nome: 'Pastel chocolate',               preco: 19.00, cat: 'Pastel Doce' },
+    { codigo: '0000000000000329', nome: 'Pastel romeu e julieta',         preco: 18.00, cat: 'Pastel Doce' }
+  ];
+
+  function log(msg, tipo = 'inf') {
+    const el = document.getElementById('log');
+    el.classList.add('visivel');
+    const linha = document.createElement('div');
+    linha.className = 'log-linha ' + tipo;
+    linha.textContent = msg;
+    el.appendChild(linha);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  window.importar = async function() {
+    const btn = document.getElementById('btn-importar');
+    btn.disabled = true;
+    btn.textContent = 'Importando...';
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { log('Você precisa estar logado. Acesse index.html primeiro.', 'err'); btn.disabled = false; return; }
+
+      try {
+        log('Criando categorias...');
+        const catIds = {};
+
+        for (const cat of CATEGORIAS) {
+          const existe = await getDocs(query(collection(db, 'categorias'), where('nome', '==', cat.nome)));
+          if (!existe.empty) {
+            catIds[cat.nome] = existe.docs[0].id;
+            log(`Categoria já existe: ${cat.nome}`, 'inf');
+          } else {
+            const ref = await addDoc(collection(db, 'categorias'), { nome: cat.nome, ordem: cat.ordem });
+            catIds[cat.nome] = ref.id;
+            log(`Categoria criada: ${cat.nome}`, 'ok');
+          }
+        }
+
+        log('Importando produtos...');
+        let criados = 0, pulados = 0;
+
+        for (const p of PRODUTOS) {
+          const existe = await getDocs(query(collection(db, 'produtos'), where('codigo', '==', p.codigo)));
+          if (!existe.empty) {
+            log(`Já existe: [${p.codigo}] ${p.nome}`, 'inf');
+            pulados++;
+            continue;
+          }
+          await addDoc(collection(db, 'produtos'), {
+            codigo:      p.codigo,
+            nome:        p.nome,
+            categoriaId: catIds[p.cat],
+            preco:       p.preco,
+            unidade:     'un',
+            ativo:       true,
+            criadoEm:    serverTimestamp()
+          });
+          log(`✓ [${p.codigo}] ${p.nome} — R$ ${p.preco.toFixed(2)}`, 'ok');
+          criados++;
+        }
+
+        document.getElementById('resumo').textContent =
+          `Importação concluída: ${criados} produtos criados, ${pulados} já existiam.`;
+        document.getElementById('resumo').classList.add('visivel');
+        btn.textContent = 'Concluído ✓';
+
+      } catch(e) {
+        log('Erro: ' + e.message, 'err');
+        btn.disabled = false;
+        btn.textContent = 'Tentar novamente';
+      }
+    });
+  };
+</script>
+</body>
+</html>
