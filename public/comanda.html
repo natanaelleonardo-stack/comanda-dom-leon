@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comanda · Dom Leon</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --marrom:     #3B2314;
+      --marrom-mid: #5C3D2E;
+      --bege:       #F5F0E8;
+      --bege-card:  #FFFDF9;
+      --verde:      #2D7A4F;
+      --vermelho:   #C0392B;
+      --texto:      #1A1208;
+      --texto-sub:  #7A6855;
+      --borda:      #E2D9CC;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bege); min-height: 100vh; padding-bottom: 100px; }
+
+    /* HEADER */
+    .header { background: var(--marrom); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+    .header-esq { display: flex; align-items: center; gap: 10px; }
+    .btn-voltar { background: none; border: none; color: var(--bege); font-size: 20px; cursor: pointer; padding: 4px; opacity: 0.85; }
+    .btn-voltar:hover { opacity: 1; }
+    .header-titulo { color: var(--bege); font-size: 14px; font-weight: 500; }
+    .header-sub { color: #C9B99A; font-size: 11px; }
+    .header-dir { display: flex; align-items: center; gap: 8px; }
+    .btn-fechar { background: var(--verde); color: #fff; border: none; border-radius: 8px; padding: 7px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; }
+    .btn-fechar:hover { opacity: 0.88; }
+
+    /* ABAS */
+    .abas { display: flex; background: var(--bege-card); border-bottom: 1px solid var(--borda); }
+    .aba { flex: 1; padding: 11px; font-size: 13px; font-weight: 500; color: var(--texto-sub); text-align: center; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; font-family: 'DM Sans', sans-serif; }
+    .aba.ativa { color: var(--marrom); border-bottom-color: var(--marrom); }
+
+    /* PAINEL ITENS LANÇADOS */
+    .painel { display: none; padding: 12px 14px; }
+    .painel.ativo { display: block; }
+
+    .vazio { text-align: center; padding: 40px 20px; color: var(--texto-sub); font-size: 13px; }
+
+    .item-lancado { background: var(--bege-card); border-radius: 10px; border: 1px solid var(--borda); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+    .il-esq { flex: 1; }
+    .il-nome { font-size: 13px; font-weight: 500; color: var(--texto); }
+    .il-sub { font-size: 11px; color: var(--texto-sub); margin-top: 2px; }
+    .il-dir { display: flex; align-items: center; gap: 10px; }
+    .il-total { font-size: 14px; font-weight: 500; color: var(--marrom); }
+    .btn-lixeira { background: none; border: none; cursor: pointer; color: #C0392B; font-size: 18px; padding: 4px; opacity: 0.7; transition: opacity 0.15s; }
+    .btn-lixeira:hover { opacity: 1; }
+
+    /* TOTAL FIXO */
+    .total-fixo { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bege-card); border-top: 1px solid var(--borda); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; z-index: 10; }
+    .total-label { font-size: 12px; color: var(--texto-sub); }
+    .total-val { font-size: 20px; font-weight: 500; color: var(--marrom); }
+
+    /* PAINEL PRODUTOS */
+    .cat-titulo { font-size: 11px; font-weight: 500; color: var(--texto-sub); text-transform: uppercase; letter-spacing: 0.06em; margin: 12px 0 6px; }
+    .prod-lista { display: flex; flex-direction: column; gap: 6px; }
+    .prod-item { background: var(--bege-card); border-radius: 10px; border: 1px solid var(--borda); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
+    .pi-esq { flex: 1; }
+    .pi-nome { font-size: 13px; font-weight: 500; color: var(--texto); }
+    .pi-preco { font-size: 11px; color: var(--texto-sub); margin-top: 2px; }
+    .btn-add { background: var(--marrom); color: var(--bege); border: none; border-radius: 7px; width: 30px; height: 30px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; transition: background 0.15s; }
+    .btn-add:hover { background: var(--marrom-mid); }
+    .btn-add:active { transform: scale(0.93); }
+
+    /* MODAL CONFIRMAR REMOVER */
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-end; justify-content: center; }
+    .modal-bg.visivel { display: flex; }
+    .modal { background: var(--bege-card); border-radius: 20px 20px 0 0; padding: 24px 20px 36px; width: 100%; max-width: 480px; animation: slideUp 0.22s ease; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-titulo { font-size: 15px; font-weight: 500; color: var(--texto); margin-bottom: 6px; }
+    .modal-sub { font-size: 13px; color: var(--texto-sub); margin-bottom: 20px; }
+    .modal-btns { display: flex; gap: 10px; }
+    .btn-cancelar { flex: 1; padding: 13px; background: none; border: 1.5px solid var(--borda); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--texto-sub); cursor: pointer; }
+    .btn-confirmar-rem { flex: 2; padding: 13px; background: var(--vermelho); border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: #fff; cursor: pointer; transition: opacity 0.2s; }
+    .btn-confirmar-rem:hover { opacity: 0.88; }
+
+    /* MODAL ADICIONAR QTDE */
+    .modal-add-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-end; justify-content: center; }
+    .modal-add-bg.visivel { display: flex; }
+    .modal-add { background: var(--bege-card); border-radius: 20px 20px 0 0; padding: 24px 20px 36px; width: 100%; max-width: 480px; animation: slideUp 0.22s ease; }
+    .qtd-ctrl { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 20px 0; }
+    .qtd-btn { width: 44px; height: 44px; border-radius: 10px; border: 1.5px solid var(--borda); background: var(--bege); font-size: 22px; color: var(--marrom); cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: 'DM Sans', sans-serif; }
+    .qtd-val { font-size: 28px; font-weight: 500; color: var(--texto); min-width: 40px; text-align: center; }
+    .obs-campo { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 10px 12px; border: 1.5px solid var(--borda); border-radius: 10px; background: var(--bege); color: var(--texto); outline: none; resize: none; margin-bottom: 16px; }
+    .obs-campo:focus { border-color: var(--marrom); }
+    .btn-add-confirm { width: 100%; padding: 14px; background: var(--marrom); border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; color: var(--bege); cursor: pointer; transition: background 0.2s; }
+    .btn-add-confirm:hover { background: var(--marrom-mid); }
+
+    .loading-wrap { text-align: center; padding: 32px; color: var(--texto-sub); font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-esq">
+      <button class="btn-voltar" onclick="window.location.href='painel.html'" title="Voltar">&#8592;</button>
+      <div>
+        <div class="header-titulo" id="h-titulo">Carregando...</div>
+        <div class="header-sub" id="h-sub">—</div>
+      </div>
+    </div>
+    <div class="header-dir">
+      <button class="btn-fechar" onclick="irParaCaixa()">Fechar comanda</button>
+    </div>
+  </div>
+
+  <div class="abas">
+    <button class="aba ativa" id="aba-itens" onclick="trocarAba('itens')">Itens lançados</button>
+    <button class="aba" id="aba-produtos" onclick="trocarAba('produtos')">Adicionar produto</button>
+  </div>
+
+  <div class="painel ativo" id="painel-itens">
+    <div class="loading-wrap" id="loading-itens">Carregando...</div>
+  </div>
+
+  <div class="painel" id="painel-produtos">
+    <div class="loading-wrap" id="loading-produtos">Carregando produtos...</div>
+  </div>
+
+  <div class="total-fixo">
+    <div>
+      <div class="total-label">Total da comanda</div>
+    </div>
+    <div class="total-val" id="total-val">R$ 0,00</div>
+  </div>
+
+  <!-- Modal remover -->
+  <div class="modal-bg" id="modal-rem" onclick="fecharModalRemFora(event)">
+    <div class="modal">
+      <div class="modal-titulo">Remover item?</div>
+      <div class="modal-sub" id="modal-rem-sub">Isso não pode ser desfeito.</div>
+      <div class="modal-btns">
+        <button class="btn-cancelar" onclick="fecharModalRem()">Cancelar</button>
+        <button class="btn-confirmar-rem" onclick="confirmarRemover()">Remover</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal adicionar -->
+  <div class="modal-add-bg" id="modal-add" onclick="fecharModalAddFora(event)">
+    <div class="modal-add">
+      <div class="modal-titulo" id="modal-add-titulo">Adicionar produto</div>
+      <div class="modal-sub" id="modal-add-preco">R$ 0,00 / un</div>
+      <div class="qtd-ctrl">
+        <button class="qtd-btn" onclick="alterarQtd(-1)">−</button>
+        <span class="qtd-val" id="qtd-val">1</span>
+        <button class="qtd-btn" onclick="alterarQtd(1)">+</button>
+      </div>
+      <textarea class="obs-campo" id="obs-campo" rows="2" placeholder="Observação (opcional)..."></textarea>
+      <button class="btn-add-confirm" onclick="confirmarAdd()">Adicionar à comanda</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, onSnapshot,
+      collection, addDoc, deleteDoc, updateDoc,
+      serverTimestamp, query, orderBy, increment
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCuDpg9yufiKQ_p_KDR2PcY32K8Xh0H_nM",
+      authDomain: "comandas-89c57.firebaseapp.com",
+      projectId: "comandas-89c57",
+      storageBucket: "comandas-89c57.firebasestorage.app",
+      messagingSenderId: "885510017154",
+      appId: "1:885510017154:web:2c7df4579fe5396de5649b"
+    };
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    const params    = new URLSearchParams(window.location.search);
+    const comandaId = params.get('id');
+    if (!comandaId) window.location.href = 'painel.html';
+
+    let itemParaRemover = null;
+    let produtoParaAdd  = null;
+    let qtdAdd          = 1;
+    let itensAtual      = [];
+
+    const canais = { salao: 'Salão', balcao: 'Balcão', delivery: 'Delivery', calcada: 'Calçada' };
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) { window.location.href = 'index.html'; return; }
+      iniciar();
+    });
+
+    async function iniciar() {
+      const snapComanda = await getDoc(doc(db, 'comandas', comandaId));
+      if (!snapComanda.exists()) { window.location.href = 'painel.html'; return; }
+
+      const c = snapComanda.data();
+      document.getElementById('h-titulo').textContent = c.identificacao;
+      document.getElementById('h-sub').textContent    = (canais[c.canal] || c.canal) + ' · ' + formatarValor(c.total || 0);
+
+      escutarItens();
+      carregarProdutos();
+    }
+
+    function escutarItens() {
+      const q = query(collection(db, 'comandas', comandaId, 'itens'), orderBy('adicionadoEm', 'asc'));
+      onSnapshot(q, (snap) => {
+        itensAtual = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderItens();
+        recalcularTotal();
+      });
+    }
+
+    function renderItens() {
+      const el = document.getElementById('painel-itens');
+      if (itensAtual.length === 0) {
+        el.innerHTML = '<div class="vazio">Nenhum item lançado.<br>Vá em "Adicionar produto".</div>';
+        return;
+      }
+      el.innerHTML = itensAtual.map(item => {
+        const subtotal = formatarValor((item.quantidade || 0) * (item.precoProduto || 0));
+        return `
+          <div class="item-lancado">
+            <div class="il-esq">
+              <div class="il-nome">${item.nomeProduto}</div>
+              <div class="il-sub">${item.quantidade} un × ${formatarValor(item.precoProduto)}${item.observacao ? ' · ' + item.observacao : ''}</div>
+            </div>
+            <div class="il-dir">
+              <div class="il-total">${subtotal}</div>
+              <button class="btn-lixeira" onclick="pedirRemover('${item.id}', '${item.nomeProduto}')" title="Remover item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                </svg>
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function recalcularTotal() {
+      const total = itensAtual.reduce((s, i) => s + (i.quantidade || 0) * (i.precoProduto || 0), 0);
+      document.getElementById('total-val').textContent = formatarValor(total);
+      document.getElementById('h-sub').textContent =
+        (document.getElementById('h-sub').textContent.split('·')[0].trim()) +
+        ' · ' + formatarValor(total);
+      updateDoc(doc(db, 'comandas', comandaId), {
+        total:    total,
+        qtdItens: itensAtual.length
+      });
+    }
+
+    async function carregarProdutos() {
+      const el = document.getElementById('painel-produtos');
+      const snapCats = await getDoc(doc(db, '_meta', 'categorias')).catch(() => null);
+
+      const snapProds = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js")
+        .then(({ getDocs, collection: col, query: q2, where, orderBy: ob }) =>
+          getDocs(q2(col(db, 'produtos'), where('ativo', '==', true), ob('nome'))));
+
+      const produtos = snapProds.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      if (produtos.length === 0) {
+        el.innerHTML = '<div class="vazio">Nenhum produto cadastrado.<br>Acesse o painel do gerente.</div>';
+        return;
+      }
+
+      const porCategoria = {};
+      produtos.forEach(p => {
+        const cat = p.categoriaId || 'Outros';
+        if (!porCategoria[cat]) porCategoria[cat] = [];
+        porCategoria[cat].push(p);
+      });
+
+      el.innerHTML = Object.entries(porCategoria).map(([cat, prods]) => `
+        <div class="cat-titulo">${cat}</div>
+        <div class="prod-lista">
+          ${prods.map(p => `
+            <div class="prod-item">
+              <div class="pi-esq">
+                <div class="pi-nome">${p.nome}</div>
+                <div class="pi-preco">${formatarValor(p.preco)} / ${p.unidade || 'un'}</div>
+              </div>
+              <button class="btn-add" onclick='abrirModalAdd(${JSON.stringify({id:p.id,nome:p.nome,preco:p.preco,unidade:p.unidade||"un"})})'>+</button>
+            </div>`).join('')}
+        </div>`).join('');
+    }
+
+    window.pedirRemover = function(itemId, nome) {
+      itemParaRemover = itemId;
+      document.getElementById('modal-rem-sub').textContent = `"${nome}" será removido da comanda.`;
+      document.getElementById('modal-rem').classList.add('visivel');
+    };
+
+    window.fecharModalRem = function() {
+      document.getElementById('modal-rem').classList.remove('visivel');
+      itemParaRemover = null;
+    };
+
+    window.fecharModalRemFora = function(e) {
+      if (e.target === document.getElementById('modal-rem')) window.fecharModalRem();
+    };
+
+    window.confirmarRemover = async function() {
+      if (!itemParaRemover) return;
+      await deleteDoc(doc(db, 'comandas', comandaId, 'itens', itemParaRemover));
+      window.fecharModalRem();
+    };
+
+    window.abrirModalAdd = function(prod) {
+      produtoParaAdd = prod;
+      qtdAdd = 1;
+      document.getElementById('qtd-val').textContent = 1;
+      document.getElementById('modal-add-titulo').textContent = prod.nome;
+      document.getElementById('modal-add-preco').textContent  = formatarValor(prod.preco) + ' / ' + prod.unidade;
+      document.getElementById('obs-campo').value = '';
+      document.getElementById('modal-add-bg').classList.add('visivel');
+    };
+
+    window.fecharModalAddFora = function(e) {
+      if (e.target === document.getElementById('modal-add-bg'))
+        document.getElementById('modal-add-bg').classList.remove('visivel');
+    };
+
+    window.alterarQtd = function(delta) {
+      qtdAdd = Math.max(1, qtdAdd + delta);
+      document.getElementById('qtd-val').textContent = qtdAdd;
+    };
+
+    window.confirmarAdd = async function() {
+      if (!produtoParaAdd) return;
+      const obs = document.getElementById('obs-campo').value.trim();
+      await addDoc(collection(db, 'comandas', comandaId, 'itens'), {
+        produtoId:    produtoParaAdd.id,
+        nomeProduto:  produtoParaAdd.nome,
+        precoProduto: produtoParaAdd.preco,
+        quantidade:   qtdAdd,
+        observacao:   obs,
+        adicionadoEm: serverTimestamp()
+      });
+      document.getElementById('modal-add-bg').classList.remove('visivel');
+      trocarAba('itens');
+    };
+
+    window.trocarAba = function(aba) {
+      document.getElementById('aba-itens').classList.toggle('ativa', aba === 'itens');
+      document.getElementById('aba-produtos').classList.toggle('ativa', aba === 'produtos');
+      document.getElementById('painel-itens').classList.toggle('ativo', aba === 'itens');
+      document.getElementById('painel-produtos').classList.toggle('ativo', aba === 'produtos');
+    };
+
+    window.irParaCaixa = function() {
+      if (itensAtual.length === 0) {
+        alert('A comanda está vazia. Adicione ao menos um item antes de fechar.');
+        return;
+      }
+      window.location.href = 'caixa.html?id=' + comandaId;
+    };
+
+    function formatarValor(v) {
+      return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        window.fecharModalRem();
+        document.getElementById('modal-add-bg').classList.remove('visivel');
+      }
+    });
+  </script>
+</body>
+</html>
