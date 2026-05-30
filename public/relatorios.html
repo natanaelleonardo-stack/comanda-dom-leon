@@ -33,6 +33,10 @@
     .rank-qtd{font-size:12px;color:var(--texto-sub);margin-right:10px}
     .rank-val{font-size:13px;font-weight:500;color:var(--marrom)}
     .vazio{text-align:center;padding:32px;color:var(--texto-sub);font-size:13px}
+    .comanda-item{background:var(--bege-card);border-radius:8px;border:1px solid var(--borda);padding:9px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+    .ci-esq .ci-nome{font-size:13px;font-weight:500;color:var(--texto)}
+    .ci-esq .ci-sub{font-size:11px;color:var(--texto-sub)}
+    .ci-total{font-size:13px;font-weight:500;color:var(--marrom)}
     .loading-wrap{text-align:center;padding:32px;color:var(--texto-sub);font-size:13px}
   </style>
 </head>
@@ -66,6 +70,8 @@
         <div class="card-sub" id="rel-ticket">ticket médio —</div>
       </div>
     </div>
+    <div class="sec-titulo" id="sec-comandas-titulo" style="display:none;margin-top:16px">Comandas fechadas hoje</div>
+    <div id="lista-comandas-hoje" style="display:none;margin-bottom:16px"></div>
     <div class="sec-titulo">Itens mais vendidos</div>
     <div id="ranking"><div class="loading-wrap">Carregando...</div></div>
   </div>
@@ -95,6 +101,8 @@
 
     async function carregarRelatorio(){
       document.getElementById('ranking').innerHTML='<div class="loading-wrap">Carregando...</div>';
+      document.getElementById('lista-comandas-hoje').style.display='none';
+      document.getElementById('sec-comandas-titulo').style.display='none';
       const agora=new Date();
       let inicio;
       if (periodo==='hoje'){inicio=new Date(agora);inicio.setHours(0,0,0,0);}
@@ -123,14 +131,37 @@
 
       const ranking=Object.entries(contagem).sort((a,b)=>b[1].qtd-a[1].qtd).slice(0,10);
       const el=document.getElementById('ranking');
-      if (ranking.length===0){el.innerHTML='<div class="vazio">Sem dados no período.</div>';return;}
-      el.innerHTML=ranking.map(([nome,d],i)=>`
+      if (ranking.length===0){el.innerHTML='<div class="vazio">Sem dados no período.</div>';}
+      else { el.innerHTML=ranking.map(([nome,d],i)=>`
         <div class="ranking-item">
           <span class="rank-pos">${i+1}.</span>
           <span class="rank-nome">${nome}</span>
           <span class="rank-qtd">${d.qtd} un</span>
           <span class="rank-val">${fmt(d.total)}</span>
-        </div>`).join('');
+        </div>`).join(''); }
+
+      if (periodo==='hoje') {
+        const secTitulo=document.getElementById('sec-comandas-titulo');
+        const listaEl=document.getElementById('lista-comandas-hoje');
+        secTitulo.style.display='block';
+        listaEl.style.display='block';
+        if (comandas.length===0) {
+          listaEl.innerHTML='<div class="vazio">Nenhuma comanda fechada hoje.</div>';
+        } else {
+          listaEl.innerHTML=comandas.map(d=>{
+            const c=d.data();
+            const canaisNome={salao:'Salão',balcao:'Balcão',delivery:'Delivery',calcada:'Calçada'};
+            const hora=c.fechadaEm?.toDate().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})||'--:--';
+            return `<div class="comanda-item">
+              <div class="ci-esq">
+                <div class="ci-nome">${c.identificacao}</div>
+                <div class="ci-sub">${canaisNome[c.canal]||c.canal} · ${c.qtdItens||0} itens · ${hora}</div>
+              </div>
+              <div class="ci-total">${fmt(c.total||0)}</div>
+            </div>`;
+          }).join('');
+        }
+      }
     }
   </script>
 </body>

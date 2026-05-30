@@ -214,8 +214,8 @@
         else if (mins>20){cor='amarelo';badgeClass='badge-amarelo';badgeTexto='Em andamento';}
         const total=(c.total||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
         const lixeira=isGerente?`<button class="btn-lixeira" onclick="event.stopPropagation();pedirExcluir('${c.id}','${c.identificacao.replace(/'/g,"\\'")}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`:'';
-        return `<div class="item ${cor}" onclick="abrirComanda('${c.id}')">
-          <div class="item-esq">
+        return `<div class="item ${cor}">
+          <div class="item-esq" onclick="abrirComanda('${c.id}')" style="cursor:pointer">
             <div class="item-titulo">${c.identificacao}</div>
             <div class="item-sub">${canais[c.canal]||c.canal} · ${c.qtdItens||0} itens · há ${tempo}</div>
           </div>

@@ -34,7 +34,10 @@
     .btn-lixeira{background:none;border:none;cursor:pointer;color:var(--vermelho);padding:4px;opacity:.7;display:flex;align-items:center}
     .btn-lixeira:hover{opacity:1}
     .btn-lixeira svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-    .cat-titulo{font-size:11px;font-weight:500;color:var(--texto-sub);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 6px}
+    .cat-titulo{font-size:11px;font-weight:500;color:var(--texto-sub);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:4px 0;user-select:none}
+    .cat-titulo .cat-arrow{font-size:14px;transition:transform .2s;display:inline-block}
+    .cat-titulo.recolhida .cat-arrow{transform:rotate(-90deg)}
+    .cat-corpo.recolhido{display:none}
     .prod-lista{display:flex;flex-direction:column;gap:6px;margin-bottom:4px}
     .prod-item{background:var(--bege-card);border-radius:10px;border:1px solid var(--borda);padding:10px 12px;display:flex;align-items:center;justify-content:space-between}
     .pi-esq{flex:1}
@@ -184,9 +187,11 @@
         if (produtos.length===0){el.innerHTML='<div class="vazio">Nenhum produto cadastrado.</div>';return;}
         const porCat={};
         produtos.forEach(p=>{const n=categoriaMap[p.categoriaId]||'Outros';if(!porCat[n])porCat[n]=[];porCat[n].push(p);});
-        el.innerHTML=Object.entries(porCat).map(([cat,prods])=>`
-          <div class="cat-titulo">${cat}</div>
-          <div class="prod-lista">
+        el.innerHTML=Object.entries(porCat).map(([cat,prods],idx)=>`
+          <div class="cat-titulo" onclick="toggleCat(this)">
+            ${cat}<span class="cat-arrow">&#9660;</span>
+          </div>
+          <div class="prod-lista cat-corpo">
             ${prods.map(p=>{qtdMap[p.id]=0;return`
               <div class="prod-item">
                 <div class="pi-esq">
@@ -203,6 +208,10 @@
       } catch(e){el.innerHTML=`<div class="vazio">Erro: ${e.message}</div>`;}
     }
 
+    window.toggleCat=function(el){
+      el.classList.toggle('recolhida');
+      el.nextElementSibling.classList.toggle('recolhido');
+    };
     window.alterarQtd=async function(prodId,delta,preco,nome,unidade,codigo){
       const novaQtd=Math.max(0,(qtdMap[prodId]||0)+delta);
       qtdMap[prodId]=novaQtd;
