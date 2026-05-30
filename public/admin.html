@@ -364,7 +364,7 @@
           return `
             <div class="item-card">
               <div class="ic-esq">
-                <div class="ic-nome">${p.codigo ? '[' + p.codigo + '] ' : ''}${p.nome}</div>
+                <div class="ic-nome"><span style="font-variant-numeric:tabular-nums;font-family:monospace;font-size:11px;color:var(--texto-sub);margin-right:6px">${p.codigo?String(p.codigo).slice(-4).padStart(4,'0'):''}</span>${p.nome}</div>
                 <div class="ic-sub">${catNome} · ${fmt(p.preco)} / ${p.unidade || 'un'}</div>
               </div>
               <div class="ic-acoes">

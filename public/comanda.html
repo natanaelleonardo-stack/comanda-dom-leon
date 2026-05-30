@@ -120,7 +120,6 @@
     let itemParaRemover=null,itensAtual=[],categoriaMap={},qtdMap={};
     const canais={salao:'Salão',balcao:'Balcão',delivery:'Delivery',calcada:'Calçada'};
     const cod4=c=>c?String(c).slice(-4).padStart(4,'0'):'';
-    const cod4=c=>c?String(c).slice(-4).padStart(4,'0'):'';
     const fmt=v=>(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 
     onAuthStateChanged(auth,(user)=>{
