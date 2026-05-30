@@ -304,7 +304,7 @@
       if (!user) { window.location.href = 'index.html'; return; }
       const snap = await getDoc(doc(db, 'usuarios', user.uid));
       if (!snap.exists() || snap.data().perfil !== 'gerente') {
-        window.location.href = 'painel.html'; return;
+        window.location.href = 'home.html'; return;
       }
       document.getElementById('header-sub').textContent = snap.data().nome || 'Gerente';
       iniciar();

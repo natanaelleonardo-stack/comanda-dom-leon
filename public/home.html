@@ -23,7 +23,7 @@
     .header-logo { width: 36px; height: 36px; border-radius: 50%; object-fit: contain; background: var(--bege); padding: 2px; }
     .header-titulo { color: var(--bege); font-size: 14px; font-weight: 500; }
     .header-sub { color: #C9B99A; font-size: 11px; }
-    .btn-sair { background: none; border: none; color: #C9B99A; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .btn-sair { background: none; border: none; color: #C9B99A; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; }
     .btn-sair:hover { color: var(--bege); }
 
     .conteudo { flex: 1; padding: 24px 16px; max-width: 480px; margin: 0 auto; width: 100%; }
@@ -44,12 +44,7 @@
     }
     .modulo:hover  { border-color: var(--marrom); }
     .modulo:active { transform: scale(0.97); }
-
-    .modulo.bloqueado {
-      opacity: 0.38;
-      cursor: not-allowed;
-      pointer-events: none;
-    }
+    .modulo.bloqueado { opacity: 0.38; cursor: not-allowed; pointer-events: none; }
 
     .mod-icone {
       width: 52px; height: 52px;
@@ -62,13 +57,12 @@
 
     .mod-nome { font-size: 13px; font-weight: 500; color: var(--texto); text-align: center; }
     .mod-sub  { font-size: 11px; color: var(--texto-sub); text-align: center; line-height: 1.3; }
-
     .mod-lock { display: none; }
     .modulo.bloqueado .mod-lock { display: block; }
     .modulo.bloqueado .mod-sub  { display: none; }
     .mod-lock svg { width: 14px; height: 14px; stroke: var(--texto-sub); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-    .loading-wrap { text-align: center; padding: 60px 20px; color: var(--texto-sub); font-size: 13px; }
+    .loading-wrap { text-align: center; padding: 60px 20px; color: var(--texto-sub); font-size: 13px; grid-column: 1/-1; }
   </style>
 </head>
 <body>
@@ -85,9 +79,9 @@
   </div>
 
   <div class="conteudo">
-    <div class="boas-vindas" id="boas-vindas">Olá! O que deseja acessar?</div>
+    <div class="boas-vindas" id="boas-vindas">O que deseja acessar?</div>
     <div class="grade" id="grade">
-      <div class="loading-wrap" style="grid-column:1/-1">Carregando...</div>
+      <div class="loading-wrap">Carregando...</div>
     </div>
   </div>
 
@@ -109,40 +103,46 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
+    const ICONE_LOCK = `<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+
     const MODULOS = [
       {
         id: 'painel', nome: 'Painel', sub: 'Comandas abertas',
-        href: 'painel.html', perfis: ['atendente','caixa','gerente'],
+        href: 'painel.html',
+        perfis: ['atendente','caixa','gerente'],
         icone: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`
       },
       {
         id: 'comanda', nome: 'Comanda', sub: 'Nova comanda rápida',
-        href: 'painel.html?nova=1', perfis: ['atendente','caixa','gerente'],
+        href: 'painel.html?nova=1',
+        perfis: ['atendente','caixa','gerente'],
         icone: `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`
       },
       {
         id: 'caixa', nome: 'Caixa', sub: 'Fechar e pagar',
-        href: 'caixa.html', perfis: ['caixa','gerente'],
+        href: 'painel.html?modo=caixa',
+        perfis: ['caixa','gerente'],
         icone: `<svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`
       },
       {
         id: 'admin', nome: 'Admin', sub: 'Produtos e usuários',
-        href: 'admin.html', perfis: ['gerente'],
+        href: 'admin.html',
+        perfis: ['gerente'],
         icone: `<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><circle cx="18" cy="5" r="2"/><path d="M18 3v4"/><path d="M16 5h4"/></svg>`
       },
       {
         id: 'relatorios', nome: 'Relatórios', sub: 'Vendas e ranking',
-        href: 'admin.html?secao=relatorios', perfis: ['gerente'],
+        href: 'relatorios.html',
+        perfis: ['gerente'],
         icone: `<svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`
       },
       {
         id: 'importar', nome: 'Importar', sub: 'Carga de produtos',
-        href: 'importar-produtos.html', perfis: ['gerente'],
+        href: 'importar-produtos.html',
+        perfis: ['gerente'],
         icone: `<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`
       }
     ];
-
-    const ICONE_LOCK = `<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) { window.location.href = 'index.html'; return; }
@@ -160,9 +160,7 @@
       grade.innerHTML = MODULOS.map(m => {
         const liberado = m.perfis.includes(perfil);
         return `
-          <a class="modulo ${liberado ? '' : 'bloqueado'}"
-             href="${liberado ? m.href : '#'}"
-             ${m.id === 'comanda' && liberado ? 'onclick="abrirNovaComanda(event)"' : ''}>
+          <a class="modulo ${liberado ? '' : 'bloqueado'}" href="${liberado ? m.href : '#'}">
             <div class="mod-icone">${m.icone}</div>
             <div class="mod-nome">${m.nome}</div>
             <div class="mod-sub">${m.sub}</div>
@@ -170,11 +168,6 @@
           </a>`;
       }).join('');
     });
-
-    window.abrirNovaComanda = function(e) {
-      e.preventDefault();
-      window.location.href = 'painel.html?nova=1';
-    };
 
     window.sair = async function() {
       await signOut(auth);
