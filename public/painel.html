@@ -286,8 +286,8 @@
       const snap = await getDoc(doc(db, 'usuarios', user.uid));
       if (snap.exists()) {
         const perfil = snap.data().perfil;
-        if (perfil === 'caixa')   { window.location.href = 'caixa.html'; return; }
-        if (perfil === 'gerente') { window.location.href = 'admin.html'; return; }
+        
+        
         document.getElementById('header-sub').textContent = snap.data().nome || 'Atendente';
       }
       escutarComandas();
