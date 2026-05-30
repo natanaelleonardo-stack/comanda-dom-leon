@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caixa · Dom Leon</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --marrom:     #3B2314;
+      --marrom-mid: #5C3D2E;
+      --bege:       #F5F0E8;
+      --bege-card:  #FFFDF9;
+      --verde:      #2D7A4F;
+      --vermelho:   #C0392B;
+      --texto:      #1A1208;
+      --texto-sub:  #7A6855;
+      --borda:      #E2D9CC;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bege); min-height: 100vh; padding-bottom: 120px; }
+
+    .header { background: var(--marrom); padding: 12px 16px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; }
+    .btn-voltar { background: none; border: none; color: var(--bege); font-size: 20px; cursor: pointer; padding: 4px; opacity: 0.85; }
+    .btn-voltar:hover { opacity: 1; }
+    .header-titulo { color: var(--bege); font-size: 14px; font-weight: 500; }
+    .header-sub { color: #C9B99A; font-size: 11px; }
+
+    .secao { padding: 14px 14px 0; }
+    .secao-titulo { font-size: 11px; font-weight: 500; color: var(--texto-sub); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+
+    /* RESUMO ITENS */
+    .resumo-card { background: var(--bege-card); border-radius: 12px; border: 1px solid var(--borda); overflow: hidden; margin-bottom: 4px; }
+    .resumo-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; border-bottom: 1px solid var(--borda); }
+    .resumo-item:last-child { border-bottom: none; }
+    .ri-nome { font-size: 13px; color: var(--texto); }
+    .ri-qtd  { font-size: 11px; color: var(--texto-sub); }
+    .ri-val  { font-size: 13px; font-weight: 500; color: var(--marrom); }
+
+    .total-resumo { background: var(--marrom); border-radius: 10px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+    .tr-label { color: #C9B99A; font-size: 12px; }
+    .tr-val   { color: var(--bege); font-size: 20px; font-weight: 500; }
+
+    /* DIVISÃO */
+    .div-card { background: var(--bege-card); border-radius: 12px; border: 1px solid var(--borda); padding: 12px 14px; }
+    .div-toggle { display: flex; align-items: center; justify-content: space-between; }
+    .div-label { font-size: 13px; font-weight: 500; color: var(--texto); }
+    .switch { position: relative; width: 42px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; background: var(--borda); border-radius: 24px; cursor: pointer; transition: background 0.2s; }
+    .slider:before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform 0.2s; }
+    input:checked + .slider { background: var(--verde); }
+    input:checked + .slider:before { transform: translateX(18px); }
+    .div-pessoas { margin-top: 12px; display: none; }
+    .div-pessoas.visivel { display: block; }
+    .pessoas-ctrl { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
+    .pc-btn { width: 36px; height: 36px; border-radius: 8px; border: 1.5px solid var(--borda); background: var(--bege); font-size: 20px; color: var(--marrom); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .pc-val { font-size: 22px; font-weight: 500; color: var(--texto); min-width: 30px; text-align: center; }
+    .pc-label { font-size: 12px; color: var(--texto-sub); }
+    .por-pessoa { background: var(--bege); border-radius: 8px; padding: 8px 12px; font-size: 13px; color: var(--texto-sub); }
+    .por-pessoa span { font-weight: 500; color: var(--marrom); }
+
+    /* PAGAMENTOS */
+    .pagamentos-lista { display: flex; flex-direction: column; gap: 8px; }
+    .pgto-item { background: var(--bege-card); border-radius: 12px; border: 1px solid var(--borda); padding: 12px 14px; }
+    .pgto-row  { display: flex; align-items: center; gap: 10px; }
+    .pgto-forma { flex: 1; }
+    .pgto-forma select { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 10px; border: 1.5px solid var(--borda); border-radius: 8px; background: var(--bege); color: var(--texto); outline: none; -webkit-appearance: none; }
+    .pgto-forma select:focus { border-color: var(--marrom); }
+    .pgto-valor { width: 120px; }
+    .pgto-valor input { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 10px; border: 1.5px solid var(--borda); border-radius: 8px; background: var(--bege); color: var(--texto); outline: none; }
+    .pgto-valor input:focus { border-color: var(--marrom); }
+    .btn-rem-pgto { background: none; border: none; cursor: pointer; color: var(--vermelho); font-size: 18px; opacity: 0.7; padding: 4px; }
+    .btn-rem-pgto:hover { opacity: 1; }
+    .troco-info { margin-top: 8px; font-size: 12px; color: var(--verde); padding: 6px 10px; background: #E8F5EE; border-radius: 6px; display: none; }
+    .troco-info.visivel { display: block; }
+    .alerta-info { margin-top: 8px; font-size: 12px; color: var(--vermelho); padding: 6px 10px; background: #FDECEA; border-radius: 6px; display: none; }
+    .alerta-info.visivel { display: block; }
+
+    .btn-add-pgto { background: none; border: 1.5px dashed var(--borda); border-radius: 10px; padding: 11px; width: 100%; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--texto-sub); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: border-color 0.15s, color 0.15s; }
+    .btn-add-pgto:hover { border-color: var(--marrom); color: var(--marrom); }
+
+    /* BARRA PROGRESSO */
+    .progresso-wrap { background: var(--bege-card); border-radius: 12px; border: 1px solid var(--borda); padding: 12px 14px; }
+    .prog-linha { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+    .prog-label { color: var(--texto-sub); }
+    .prog-val   { font-weight: 500; color: var(--marrom); }
+    .prog-bar-bg { background: var(--bege); border-radius: 20px; height: 8px; overflow: hidden; }
+    .prog-bar    { height: 100%; border-radius: 20px; background: var(--verde); transition: width 0.3s; }
+    .prog-bar.excesso { background: var(--vermelho); }
+    .prog-restante { font-size: 12px; color: var(--texto-sub); margin-top: 6px; text-align: right; }
+    .prog-restante.ok      { color: var(--verde); }
+    .prog-restante.excesso { color: var(--vermelho); }
+
+    /* RODAPÉ */
+    .rodape { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bege-card); border-top: 1px solid var(--borda); padding: 12px 16px; z-index: 10; }
+    .btn-fechar-final { width: 100%; padding: 15px; background: var(--verde); color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; }
+    .btn-fechar-final:hover { opacity: 0.88; }
+    .btn-fechar-final:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* MODAL SUCESSO */
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; align-items: center; justify-content: center; padding: 20px; }
+    .modal-bg.visivel { display: flex; }
+    .modal-sucesso { background: var(--bege-card); border-radius: 20px; padding: 32px 24px; width: 100%; max-width: 360px; text-align: center; }
+    .sucesso-icone { font-size: 48px; margin-bottom: 12px; }
+    .sucesso-titulo { font-size: 18px; font-weight: 500; color: var(--verde); margin-bottom: 6px; }
+    .sucesso-sub { font-size: 13px; color: var(--texto-sub); margin-bottom: 24px; }
+    .btn-novo-atend { width: 100%; padding: 14px; background: var(--marrom); color: var(--bege); border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; }
+
+    .loading-wrap { text-align: center; padding: 40px; color: var(--texto-sub); font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <button class="btn-voltar" onclick="history.back()">&#8592;</button>
+    <div>
+      <div class="header-titulo" id="h-titulo">Fechamento</div>
+      <div class="header-sub" id="h-sub">Carregando...</div>
+    </div>
+  </div>
+
+  <div class="secao">
+    <div class="secao-titulo">Resumo da comanda</div>
+    <div id="resumo-itens"><div class="loading-wrap">Carregando...</div></div>
+    <div class="total-resumo">
+      <span class="tr-label">Total</span>
+      <span class="tr-val" id="total-comanda">R$ 0,00</span>
+    </div>
+  </div>
+
+  <div class="secao" style="margin-top:14px">
+    <div class="secao-titulo">Divisão de conta</div>
+    <div class="div-card">
+      <div class="div-toggle">
+        <span class="div-label">Dividir entre pessoas</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle-divisao" onchange="toggleDivisao()">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="div-pessoas" id="div-pessoas">
+        <div class="pessoas-ctrl">
+          <button class="pc-btn" onclick="alterarPessoas(-1)">−</button>
+          <span class="pc-val" id="num-pessoas">2</span>
+          <span class="pc-label">pessoas</span>
+          <button class="pc-btn" onclick="alterarPessoas(1)">+</button>
+        </div>
+        <div class="por-pessoa">Cada pessoa paga: <span id="val-por-pessoa">R$ 0,00</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="secao" style="margin-top:14px">
+    <div class="secao-titulo">Formas de pagamento</div>
+    <div class="pagamentos-lista" id="pagamentos-lista"></div>
+    <button class="btn-add-pgto" style="margin-top:8px" onclick="adicionarPagamento()">+ Adicionar forma de pagamento</button>
+  </div>
+
+  <div class="secao" style="margin-top:14px">
+    <div class="secao-titulo">Progresso do pagamento</div>
+    <div class="progresso-wrap">
+      <div class="prog-linha">
+        <span class="prog-label">Total pago</span>
+        <span class="prog-val" id="prog-pago">R$ 0,00</span>
+      </div>
+      <div class="prog-bar-bg"><div class="prog-bar" id="prog-bar" style="width:0%"></div></div>
+      <div class="prog-restante" id="prog-restante">Faltam R$ 0,00</div>
+    </div>
+  </div>
+
+  <div class="rodape">
+    <button class="btn-fechar-final" id="btn-fechar" onclick="fecharComanda()" disabled>Confirmar fechamento</button>
+  </div>
+
+  <div class="modal-bg" id="modal-sucesso">
+    <div class="modal-sucesso">
+      <div class="sucesso-icone">✅</div>
+      <div class="sucesso-titulo">Comanda fechada!</div>
+      <div class="sucesso-sub" id="sucesso-sub">Pagamento registrado com sucesso.</div>
+      <button class="btn-novo-atend" onclick="window.location.href='painel.html'">Voltar ao painel</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, updateDoc,
+      collection, getDocs, addDoc, serverTimestamp, query, orderBy
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCuDpg9yufiKQ_p_KDR2PcY32K8Xh0H_nM",
+      authDomain: "comandas-89c57.firebaseapp.com",
+      projectId: "comandas-89c57",
+      storageBucket: "comandas-89c57.firebasestorage.app",
+      messagingSenderId: "885510017154",
+      appId: "1:885510017154:web:2c7df4579fe5396de5649b"
+    };
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    const params    = new URLSearchParams(window.location.search);
+    const comandaId = params.get('id');
+    if (!comandaId) window.location.href = 'painel.html';
+
+    let totalComanda  = 0;
+    let numPessoas    = 2;
+    let pagamentos    = [];
+    let usuarioAtual  = null;
+    let contadorPgto  = 0;
+
+    const formas = [
+      { value: 'dinheiro',  label: 'Dinheiro' },
+      { value: 'debito',    label: 'Cartão de débito' },
+      { value: 'credito',   label: 'Cartão de crédito' },
+      { value: 'pix',       label: 'PIX' },
+      { value: 'prazo',     label: 'A prazo' },
+      { value: 'cortesia',  label: 'Cortesia' }
+    ];
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) { window.location.href = 'index.html'; return; }
+      usuarioAtual = user;
+      iniciar();
+    });
+
+    async function iniciar() {
+      const snapC = await getDoc(doc(db, 'comandas', comandaId));
+      if (!snapC.exists()) { window.location.href = 'painel.html'; return; }
+
+      const c = snapC.data();
+      totalComanda = c.total || 0;
+      const canais = { salao: 'Salão', balcao: 'Balcão', delivery: 'Delivery', calcada: 'Calçada' };
+      document.getElementById('h-titulo').textContent = c.identificacao;
+      document.getElementById('h-sub').textContent    = canais[c.canal] || c.canal;
+      document.getElementById('total-comanda').textContent = fmt(totalComanda);
+
+      const snapItens = await getDocs(query(collection(db, 'comandas', comandaId, 'itens'), orderBy('adicionadoEm')));
+      const itens = snapItens.docs.map(d => d.data());
+
+      document.getElementById('resumo-itens').innerHTML =
+        '<div class="resumo-card">' +
+        itens.map(i => `
+          <div class="resumo-item">
+            <div><div class="ri-nome">${i.nomeProduto}</div><div class="ri-qtd">${i.quantidade} un × ${fmt(i.precoProduto)}</div></div>
+            <div class="ri-val">${fmt(i.quantidade * i.precoProduto)}</div>
+          </div>`).join('') +
+        '</div>';
+
+      atualizarDivisao();
+      adicionarPagamento();
+    }
+
+    window.toggleDivisao = function() {
+      const on = document.getElementById('toggle-divisao').checked;
+      document.getElementById('div-pessoas').classList.toggle('visivel', on);
+      atualizarDivisao();
+    };
+
+    window.alterarPessoas = function(delta) {
+      numPessoas = Math.max(2, numPessoas + delta);
+      document.getElementById('num-pessoas').textContent = numPessoas;
+      atualizarDivisao();
+    };
+
+    function atualizarDivisao() {
+      const on = document.getElementById('toggle-divisao').checked;
+      const pp = on ? totalComanda / numPessoas : 0;
+      document.getElementById('val-por-pessoa').textContent = fmt(pp);
+    }
+
+    window.adicionarPagamento = function() {
+      const id = ++contadorPgto;
+      pagamentos.push({ id, forma: 'dinheiro', valor: '' });
+
+      const lista = document.getElementById('pagamentos-lista');
+      const div = document.createElement('div');
+      div.className = 'pgto-item';
+      div.id = 'pgto-' + id;
+      div.innerHTML = `
+        <div class="pgto-row">
+          <div class="pgto-forma">
+            <select onchange="atualizarForma(${id}, this.value)">
+              ${formas.map(f => `<option value="${f.value}">${f.label}</option>`).join('')}
+            </select>
+          </div>
+          <div class="pgto-valor">
+            <input type="number" min="0" step="0.01" placeholder="R$ 0,00"
+              oninput="atualizarValor(${id}, this.value)"
+              id="inp-${id}">
+          </div>
+          <button class="btn-rem-pgto" onclick="removerPagamento(${id})" title="Remover">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>
+        <div class="troco-info" id="troco-${id}"></div>
+        <div class="alerta-info" id="alerta-${id}"></div>`;
+      lista.appendChild(div);
+      atualizarProgresso();
+    };
+
+    window.removerPagamento = function(id) {
+      pagamentos = pagamentos.filter(p => p.id !== id);
+      document.getElementById('pgto-' + id).remove();
+      atualizarProgresso();
+    };
+
+    window.atualizarForma = function(id, forma) {
+      const p = pagamentos.find(p => p.id === id);
+      if (p) { p.forma = forma; atualizarProgresso(); }
+    };
+
+    window.atualizarValor = function(id, val) {
+      const p = pagamentos.find(p => p.id === id);
+      if (!p) return;
+      p.valor = parseFloat(val) || 0;
+
+      const troco  = document.getElementById('troco-' + id);
+      const alerta = document.getElementById('alerta-' + id);
+      troco.classList.remove('visivel');
+      alerta.classList.remove('visivel');
+
+      if (p.forma === 'dinheiro' && p.valor > 0) {
+        const restante = totalComanda - totalOutrosPagamentos(id);
+        const t = p.valor - restante;
+        if (t > 0) {
+          troco.textContent = 'Troco: ' + fmt(t);
+          troco.classList.add('visivel');
+        } else if (t < 0 && Math.abs(t) > 0.01) {
+          alerta.textContent = 'Valor insuficiente para cobrir o restante (' + fmt(restante) + ')';
+          alerta.classList.add('visivel');
+        }
+      }
+      atualizarProgresso();
+    };
+
+    function totalOutrosPagamentos(excludeId) {
+      return pagamentos.filter(p => p.id !== excludeId).reduce((s, p) => s + (p.valor || 0), 0);
+    }
+
+    function totalPago() {
+      return pagamentos.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    }
+
+    function atualizarProgresso() {
+      const pago      = totalPago();
+      const pct       = Math.min((pago / totalComanda) * 100, 100);
+      const restante  = totalComanda - pago;
+      const excesso   = pago > totalComanda + 0.01;
+
+      document.getElementById('prog-pago').textContent = fmt(pago);
+      const bar = document.getElementById('prog-bar');
+      bar.style.width = pct + '%';
+      bar.classList.toggle('excesso', excesso);
+
+      const el = document.getElementById('prog-restante');
+      if (Math.abs(restante) < 0.01) {
+        el.textContent = 'Pagamento completo ✓';
+        el.className = 'prog-restante ok';
+      } else if (excesso) {
+        el.textContent = 'Excesso de ' + fmt(Math.abs(restante));
+        el.className = 'prog-restante excesso';
+      } else {
+        el.textContent = 'Faltam ' + fmt(restante);
+        el.className = 'prog-restante';
+      }
+
+      const podeFecha = pago >= totalComanda - 0.01 && pagamentos.length > 0;
+      document.getElementById('btn-fechar').disabled = !podeFecha;
+    }
+
+    window.fecharComanda = async function() {
+      const btn = document.getElementById('btn-fechar');
+      btn.disabled = true;
+      btn.textContent = 'Fechando...';
+
+      try {
+        for (const p of pagamentos) {
+          if (!p.valor || p.valor <= 0) continue;
+          await addDoc(collection(db, 'comandas', comandaId, 'pagamentos'), {
+            forma:        p.forma,
+            valor:        parseFloat(p.valor),
+            registradoEm: serverTimestamp()
+          });
+        }
+
+        await updateDoc(doc(db, 'comandas', comandaId), {
+          status:     'fechada',
+          fechadaEm:  serverTimestamp(),
+          fechadaPor: usuarioAtual.uid
+        });
+
+        const pago = totalPago();
+        const troco = Math.max(0, pago - totalComanda);
+        let sub = 'Total: ' + fmt(totalComanda);
+        if (troco > 0.01) sub += ' · Troco: ' + fmt(troco);
+
+        document.getElementById('sucesso-sub').textContent = sub;
+        document.getElementById('modal-sucesso').classList.add('visivel');
+
+      } catch (e) {
+        alert('Erro ao fechar comanda: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = 'Confirmar fechamento';
+      }
+    };
+
+    function fmt(v) {
+      return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+  </script>
+</body>
+</html>
