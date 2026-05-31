@@ -52,10 +52,10 @@
     .btn-nova{background:var(--marrom);color:var(--bege);border:none;border-radius:12px;padding:14px 28px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;width:100%;max-width:400px;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .2s,transform .1s}
     .btn-nova:hover{background:var(--marrom-mid)}
     .btn-nova:active{transform:scale(.98)}
-    .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center}
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center;padding:20px}
     .modal-bg.visivel{display:flex}
-    .modal{background:var(--bege-card);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;animation:slideUp .25s ease}
-    @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    .modal{background:var(--bege-card);border-radius:16px;padding:24px 20px 28px;width:100%;max-width:400px;animation:fadeIn .2s ease}
+    @keyframes fadeIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
     .modal-titulo{font-size:16px;font-weight:500;color:var(--texto);margin-bottom:20px}
     .campo{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
     .campo label{font-size:11px;font-weight:500;color:var(--texto-sub);text-transform:uppercase;letter-spacing:.06em}
@@ -71,6 +71,7 @@
     .loading-wrap{text-align:center;padding:40px 0;color:var(--texto-sub);font-size:13px}
     .alertas-wrap{padding:10px 14px 0}
     .alerta-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:6px;cursor:pointer;transition:opacity .15s}
+    .alerta-ok-btn{background:var(--verde);color:#fff;border:none;border-radius:7px;padding:6px 12px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;flex-shrink:0;margin-left:auto}
     .alerta-item:active{opacity:.8}
     .alerta-pronto{background:#E8F5EE;border:1px solid #9FE1CB}
     .alerta-problema{background:#FDECEA;border:1px solid #F5C4C4}
@@ -251,7 +252,7 @@
         where('statusCozinha','in',['pronto','problema','rejeitado'])
       );
       onSnapshot(q,(snap)=>{
-        const alertas=snap.docs.map(d=>({id:d.id,...d.data()}));
+        const alertas=snap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>c.statusCozinha!=='dispensado');
         const wrap=document.getElementById('alertas-wrap');
         if(alertas.length===0){wrap.style.display='none';wrap.innerHTML='';return;}
         wrap.style.display='block';
@@ -266,16 +267,21 @@
           const msg=isProblema
             ?(c.problemaDescricao?'Problema: '+c.problemaDescricao:'Cozinha rejeitou — verificar')
             :'Pronto para entregar ao cliente';
+          const btnOk=!isProblema?`<button class="alerta-ok-btn" onclick="event.stopPropagation();dispensarAlerta('${c.id}')">Ok</button>`:'';
           return `<div class="alerta-item ${tipo}" onclick="abrirComanda('${c.id}')">
             <div class="alerta-icon" style="background:${cor}">${icon}</div>
-            <div>
+            <div style="flex:1">
               <div class="alerta-nome">${c.identificacao} — ${isProblema?'Atenção':'Pronto! ✓'}</div>
               <div class="alerta-sub">${canais[c.canal]||c.canal} · ${msg}</div>
             </div>
+            ${btnOk}
           </div>`;
         }).join('');
       });
     }
+    window.dispensarAlerta=async function(id){
+      await updateDoc(doc(db,'comandas',id),{statusCozinha:'dispensado'});
+    };
     window.filtrar=function(btn){
       document.querySelectorAll('.filtro').forEach(b=>b.classList.remove('ativo'));
       btn.classList.add('ativo'); canalAtivo=btn.dataset.canal;
@@ -292,7 +298,7 @@
       const canaisNome={salao:'Salão',balcao:'Balcão',delivery:'Delivery',calcada:'Calçada'};
       lista.innerHTML=fechadas.map(c=>{
         const total=(c.total||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-        return `<div class="item" style="border-left-color:var(--texto-sub);opacity:.8">
+        return `<div class="item" style="border-left-color:var(--texto-sub);opacity:.8;cursor:pointer" onclick="abrirComandaConsulta('${c.id}')">
           <div class="item-esq">
             <div class="item-titulo">${c.identificacao}</div>
             <div class="item-sub">${canaisNome[c.canal]||c.canal} · ${c.qtdItens||0} itens</div>
@@ -305,6 +311,7 @@
       }).join('');
     }
     window.abrirComanda=function(id){ window.location.href='comanda.html?id='+id; };
+    window.abrirComandaConsulta=function(id){ window.location.href='comanda.html?id='+id+'&modo=consulta'; };
     window.abrirModal=function(){ document.getElementById('modal-bg').classList.add('visivel'); document.getElementById('m-id').focus(); };
     window.fecharModal=function(){ document.getElementById('modal-bg').classList.remove('visivel'); document.getElementById('m-id').value=''; };
     window.fecharModalFora=function(e){ if(e.target===document.getElementById('modal-bg')) window.fecharModal(); };

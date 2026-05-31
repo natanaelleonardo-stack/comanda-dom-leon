@@ -65,6 +65,11 @@
     .btn-del:hover { opacity: 1; }
 
     .vazio { text-align: center; padding: 40px 20px; color: var(--texto-sub); font-size: 13px; }
+    .item-card.drag-over { border-color: var(--marrom); background: #F5F0E8; }
+    .item-card[draggable] { cursor: grab; }
+    .item-card[draggable]:active { cursor: grabbing; }
+    .drag-handle { color: var(--texto-sub); opacity: .5; cursor: grab; padding: 4px; display: flex; align-items: center; margin-right: 4px; }
+    .drag-handle svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
 
     /* RELATÓRIOS */
     .rel-filtros { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -236,7 +241,7 @@
     <div class="modal">
       <div class="modal-titulo" id="modal-cat-titulo">Nova categoria</div>
       <div class="campo"><label>Nome da categoria</label><input type="text" id="cat-nome" placeholder="ex: Pães"></div>
-      <div class="campo"><label>Ordem de exibição</label><input type="number" id="cat-ordem" min="1" placeholder="1"></div>
+
       <div class="modal-btns">
         <button class="btn-cancelar" onclick="fecharModal('modal-categoria')">Cancelar</button>
         <button class="btn-salvar" id="btn-salvar-cat" onclick="salvarCategoria()">Salvar</button>
@@ -333,9 +338,12 @@
     function renderCategorias() {
       const el = document.getElementById('lista-categorias');
       if (categorias.length === 0) { el.innerHTML = '<div class="vazio">Nenhuma categoria cadastrada.</div>'; return; }
-      el.innerHTML = '<div class="lista">' + categorias.map(c => `
-        <div class="item-card">
-          <div class="ic-esq"><div class="ic-nome">${c.nome}</div><div class="ic-sub">Ordem: ${c.ordem}</div></div>
+      el.innerHTML = '<div class="lista" id="cat-lista-drag">' + categorias.map((c,idx) => `
+        <div class="item-card" draggable="true" data-cat-id="${c.id}" data-cat-idx="${idx}">
+          <div class="drag-handle" title="Arrastar para reordenar">
+            <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+          </div>
+          <div class="ic-esq"><div class="ic-nome">${c.nome}</div></div>
           <div class="ic-acoes">
             <button class="btn-edit" onclick='editarCategoria(${JSON.stringify({id:c.id,nome:c.nome,ordem:c.ordem})})' title="Editar">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -345,6 +353,7 @@
             </button>
           </div>
         </div>`).join('') + '</div>';
+      iniciarDragDrop();
     }
 
     function atualizarSelectCategorias() {
@@ -479,12 +488,16 @@
     window.salvarCategoria = async function() {
       const btn   = document.getElementById('btn-salvar-cat');
       const nome  = document.getElementById('cat-nome').value.trim();
-      const ordem = parseInt(document.getElementById('cat-ordem').value) || 1;
       if (!nome) { alert('Informe o nome da categoria.'); return; }
       btn.disabled = true; btn.textContent = 'Salvando...';
       try {
-        if (editandoId) await updateDoc(doc(db, 'categorias', editandoId), { nome, ordem });
-        else await addDoc(collection(db, 'categorias'), { nome, ordem });
+        if (editandoId) {
+          const catAtual = categorias.find(c => c.id === editandoId);
+          await updateDoc(doc(db, 'categorias', editandoId), { nome, ordem: catAtual?.ordem || 1 });
+        } else {
+          const maxOrdem = categorias.length > 0 ? Math.max(...categorias.map(c => c.ordem || 0)) : 0;
+          await addDoc(collection(db, 'categorias'), { nome, ordem: maxOrdem + 1 });
+        }
         fecharModal('modal-categoria');
       } catch(e) { alert('Erro: ' + e.message); }
       btn.disabled = false; btn.textContent = 'Salvar';
@@ -604,6 +617,32 @@
         </div>`).join('');
     }
 
+    function iniciarDragDrop(){
+      const lista=document.getElementById('cat-lista-drag');
+      if(!lista) return;
+      let dragSrc=null;
+      lista.querySelectorAll('[draggable]').forEach(item=>{
+        item.addEventListener('dragstart',e=>{ dragSrc=item; item.style.opacity='.5'; e.dataTransfer.effectAllowed='move'; });
+        item.addEventListener('dragend',()=>{ item.style.opacity='1'; lista.querySelectorAll('[draggable]').forEach(i=>i.classList.remove('drag-over')); });
+        item.addEventListener('dragover',e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; item.classList.add('drag-over'); });
+        item.addEventListener('dragleave',()=>item.classList.remove('drag-over'));
+        item.addEventListener('drop',async e=>{
+          e.preventDefault();
+          if(dragSrc===item) return;
+          item.classList.remove('drag-over');
+          const items=[...lista.querySelectorAll('[draggable]')];
+          const fromIdx=items.indexOf(dragSrc);
+          const toIdx=items.indexOf(item);
+          if(fromIdx===toIdx) return;
+          // Reordenar array de categorias
+          const reordenado=[...categorias];
+          const [moved]=reordenado.splice(fromIdx,1);
+          reordenado.splice(toIdx,0,moved);
+          // Salvar nova ordem no Firestore
+          await Promise.all(reordenado.map((c,i)=>updateDoc(doc(db,'categorias',c.id),{ordem:i+1})));
+        });
+      });
+    }
     window.fecharModal = function(id) {
       document.getElementById(id).classList.remove('visivel');
       editandoId = null;
