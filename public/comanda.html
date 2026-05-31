@@ -52,6 +52,14 @@
     .ctrl-btn.add:hover{background:var(--marrom-mid)}
     .ctrl-qtd{font-size:14px;font-weight:500;color:var(--texto);min-width:20px;text-align:center}
     .total-fixo{position:fixed;bottom:0;left:0;right:0;background:var(--bege-card);border-top:1px solid var(--borda);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;z-index:10}
+    .btn-enviar-cozinha{background:#B8860B;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:opacity .2s}
+    .btn-enviar-cozinha:hover{opacity:.88}
+    .badge-item{font-size:9px;font-weight:500;padding:1px 6px;border-radius:20px;margin-left:6px}
+    .badge-pendente{background:#F5F0E8;color:#7A6855}
+    .badge-enviado{background:#EDE9FE;color:#5B21B6}
+    .badge-producao{background:#FEF7E0;color:#7A5700}
+    .badge-pronto{background:#E8F5EE;color:#1B5E35}
+    .badge-rejeitado{background:#FDECEA;color:#8B1A1A}
     .total-label{font-size:12px;color:var(--texto-sub)}
     .total-val{font-size:20px;font-weight:500;color:var(--marrom)}
     .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-end;justify-content:center}
@@ -81,6 +89,7 @@
       <button class="btn-icon" onclick="window.location.href='home.html'" title="Início">
         <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </button>
+      <button class="btn-enviar-cozinha" id="btn-cozinha" onclick="enviarParaCozinha()" style="display:none">📤 Cozinha</button>
       <button class="btn-fechar" onclick="irParaCaixa()">Fechar comanda</button>
     </div>
   </div>
@@ -160,7 +169,7 @@
       el.innerHTML=itensAtual.map(item=>`
         <div class="item-lancado">
           <div class="il-esq">
-            <div class="il-nome"><span style="font-variant-numeric:tabular-nums;font-family:monospace;font-size:11px;color:var(--texto-sub);margin-right:6px">${cod4(item.codigoProduto)}</span>${item.nomeProduto}</div>
+            <div class="il-nome"><span style="font-variant-numeric:tabular-nums;font-family:monospace;font-size:11px;color:var(--texto-sub);margin-right:6px">${cod4(item.codigoProduto)}</span>${item.nomeProduto}<span class="badge-item ${badgeClass(item.statusItem)}">${badgeTexto(item.statusItem)}</span></div>
             <div class="il-sub">${item.quantidade} un × ${fmt(item.precoProduto)}${item.observacao?' · '+item.observacao:''}</div>
           </div>
           <div class="il-dir">
@@ -172,7 +181,7 @@
         </div>`).join('');
     }
 
-    function recalcularTotal(){
+    function recalcularTotal(){ atualizarBtnCozinha();
       const total=itensAtual.reduce((s,i)=>s+(i.quantidade||0)*(i.precoProduto||0),0);
       document.getElementById('total-val').textContent=fmt(total);
       document.getElementById('h-sub').textContent=document.getElementById('h-sub').textContent.split('·')[0].trim()+' · '+fmt(total);
@@ -243,6 +252,36 @@
       document.getElementById('aba-produtos').classList.toggle('ativa',aba==='produtos');
       document.getElementById('painel-itens').classList.toggle('ativo',aba==='itens');
       document.getElementById('painel-produtos').classList.toggle('ativo',aba==='produtos');
+    };
+    function badgeClass(s){
+      const m={pendente:'badge-pendente',enviado:'badge-enviado',em_producao:'badge-producao',pronto:'badge-pronto',rejeitado:'badge-rejeitado'};
+      return m[s]||'badge-pendente';
+    }
+    function badgeTexto(s){
+      const m={pendente:'Pendente',enviado:'Na cozinha',em_producao:'Fazendo',pronto:'Pronto',rejeitado:'Rejeitado'};
+      return m[s]||'';
+    }
+    function atualizarBtnCozinha(){
+      const temPendente=itensAtual.some(i=>!i.statusItem||i.statusItem==='pendente');
+      const btn=document.getElementById('btn-cozinha');
+      if(btn) btn.style.display=temPendente?'block':'none';
+    }
+    window.enviarParaCozinha=async function(){
+      const pendentes=itensAtual.filter(i=>!i.statusItem||i.statusItem==='pendente');
+      if(pendentes.length===0){alert('Nenhum item pendente para enviar.');return;}
+      const btn=document.getElementById('btn-cozinha');
+      btn.disabled=true;btn.textContent='Enviando...';
+      try{
+        await Promise.all(pendentes.map(i=>
+          updateDoc(doc(db,'comandas',comandaId,'itens',i.id),{statusItem:'enviado',enviadoEm:serverTimestamp()})
+        ));
+        await updateDoc(doc(db,'comandas',comandaId),{
+          status:'em_producao',
+          enviadoEm:serverTimestamp()
+        });
+        btn.textContent='📤 Cozinha';
+        btn.disabled=false;
+      }catch(e){alert('Erro: '+e.message);btn.disabled=false;btn.textContent='📤 Cozinha';}
     };
     window.irParaCaixa=function(){
       if (itensAtual.length===0){alert('A comanda está vazia. Adicione ao menos um item antes de fechar.');return;}
