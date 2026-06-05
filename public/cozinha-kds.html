@@ -277,9 +277,24 @@
     };
 
     window.marcarPronto=async function(id){
+      // Atualizar statusItem de todos os itens enviados/em_producao para 'pronto'
+      try {
+        const itensSnap=await getDocs(
+          query(collection(db,'comandas',id,'itens'),
+            where('statusItem','in',['enviado','em_producao']))
+        );
+        await Promise.all(itensSnap.docs.map(d=>
+          updateDoc(doc(db,'comandas',id,'itens',d.id),{
+            statusItem:'pronto',
+            prontoEm:serverTimestamp()
+          })
+        ));
+      } catch(e){ console.error('Erro ao atualizar itens:',e); }
+
+      // Atualizar status da comanda
       await updateDoc(doc(db,'comandas',id),{
+        status:'pronto',
         statusCozinha:'pronto',
-        enviadoParaCozinha:false,
         prontoEm:serverTimestamp()
       });
     };
