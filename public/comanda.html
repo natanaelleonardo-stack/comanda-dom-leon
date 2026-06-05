@@ -342,11 +342,14 @@
         await Promise.all(pendentes.map(i=>
           updateDoc(doc(db,'comandas',comandaId,'itens',i.id),{statusItem:'enviado',enviadoEm:serverTimestamp()})
         ));
+        // Só atualiza enviadoEm se ainda não existir — preserva o timer do primeiro envio
+        const snapC=await getDoc(doc(db,'comandas',comandaId));
+        const jaTemEnvio=snapC.exists()&&snapC.data().enviadoEm;
         await updateDoc(doc(db,'comandas',comandaId),{
           status:'em_producao',
           enviadoParaCozinha:true,
           alertaDispensado:false,
-          enviadoEm:serverTimestamp()
+          ...(jaTemEnvio?{}:{enviadoEm:serverTimestamp()})
         });
         btn.textContent='📤 Cozinha';
         btn.disabled=false;
