@@ -261,7 +261,7 @@
         where('statusCozinha','in',['pronto','problema','rejeitado'])
       );
       onSnapshot(q,(snap)=>{
-        const alertas=snap.docs.map(d=>({id:d.id,...d.data()}));
+        const alertas=snap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>!c.alertaDispensado);
         const wrap=document.getElementById('alertas-wrap');
         if(alertas.length===0){wrap.style.display='none';wrap.innerHTML='';return;}
         wrap.style.display='block';
@@ -288,11 +288,9 @@
         }).join('');
       });
     }
-    window.dispensarAlerta=function(id){
-      const el=document.getElementById('alerta-'+id);
-      if(el) el.remove();
-      const wrap=document.getElementById('alertas-wrap');
-      if(wrap&&wrap.querySelectorAll('.alerta-item').length===0) wrap.style.display='none';
+    window.dispensarAlerta=async function(id){
+      // Salva no Firestore que o alerta foi visto — sem alterar status da comanda
+      await updateDoc(doc(db,'comandas',id),{alertaDispensado:true});
     };
     window.filtrar=function(btn){
       document.querySelectorAll('.filtro').forEach(b=>b.classList.remove('ativo'));
