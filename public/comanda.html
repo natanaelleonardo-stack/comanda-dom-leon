@@ -63,6 +63,24 @@
     .total-label{font-size:12px;color:var(--texto-sub)}
     .total-val{font-size:20px;font-weight:500;color:var(--marrom)}
     .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-end;justify-content:center}
+    .modal-prod-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-end;justify-content:center}
+    .modal-prod-bg.visivel{display:flex}
+    .modal-prod{background:var(--bege-card);border-radius:20px 20px 0 0;padding:20px 20px 36px;width:100%;max-width:480px;animation:slideUp .22s ease;max-height:85vh;overflow-y:auto}
+    .adic-row{display:flex;flex-direction:column;gap:6px;background:var(--bege);border-radius:10px;padding:10px 12px;margin-bottom:8px;border:1px solid var(--borda)}
+    .adic-nome{font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;border:1.5px solid var(--borda);border-radius:8px;background:var(--bege-card);color:var(--texto);outline:none;width:100%}
+    .adic-nome:focus{border-color:var(--marrom)}
+    .adic-valor-row{display:flex;align-items:center;justify-content:space-between}
+    .adic-valor-label{font-size:11px;color:var(--texto-sub)}
+    .adic-ctrl{display:flex;align-items:center;gap:8px}
+    .adic-btn{width:28px;height:28px;border-radius:7px;border:1.5px solid var(--borda);background:var(--bege-card);font-size:16px;color:var(--marrom);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif}
+    .adic-val-num{font-size:13px;font-weight:500;color:var(--marrom);min-width:48px;text-align:center}
+    .btn-add-adic{background:none;border:1.5px dashed var(--borda);border-radius:8px;padding:8px;width:100%;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--texto-sub);cursor:pointer;margin-bottom:10px}
+    .btn-add-adic:hover{border-color:var(--marrom);color:var(--marrom)}
+    .resumo-total{background:var(--bege);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .rt-label{font-size:12px;color:var(--texto-sub)}
+    .rt-val{font-size:16px;font-weight:500;color:var(--marrom)}
+    .il-obs{font-size:11px;color:var(--texto-sub);font-style:italic;margin-top:1px}
+    .il-adic{font-size:11px;color:var(--verde);margin-top:1px}
     .modal-bg.visivel{display:flex}
     .modal{background:var(--bege-card);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;animation:slideUp .22s ease}
     @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
@@ -105,6 +123,35 @@
   <div class="total-fixo">
     <div class="total-label">Total da comanda</div>
     <div class="total-val" id="total-val">R$ 0,00</div>
+  </div>
+
+  <!-- Modal produto obs+adicionais -->
+  <div class="modal-prod-bg" id="modal-prod" onclick="fecharModalProdFora(event)">
+    <div class="modal-prod">
+      <div class="modal-titulo" id="mp-titulo">Produto</div>
+      <div style="font-size:12px;color:var(--texto-sub);margin-bottom:14px" id="mp-preco">R$ 0,00 / un</div>
+      <div class="campo"><label>Quantidade</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="ctrl-btn" onclick="mpAlterarQtd(-1)">−</button>
+          <span id="mp-qtd" style="font-size:18px;font-weight:500;color:var(--texto);min-width:24px;text-align:center">1</span>
+          <button class="ctrl-btn" onclick="mpAlterarQtd(1)">+</button>
+        </div>
+      </div>
+      <div class="campo"><label>Observação</label>
+        <input type="text" id="mp-obs" placeholder="ex: sem cebola, bem passado...">
+      </div>
+      <div style="font-size:11px;font-weight:500;color:var(--texto-sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Adicionais</div>
+      <div id="mp-adicionais"></div>
+      <button class="btn-add-adic" onclick="mpAddAdic()">+ Adicionar item extra</button>
+      <div class="resumo-total">
+        <span class="rt-label">Total do item</span>
+        <span class="rt-val" id="mp-total">R$ 0,00</span>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-cancelar" onclick="fecharModalProd()">Cancelar</button>
+        <button class="btn-confirmar" onclick="confirmarModalProd()">Adicionar à comanda</button>
+      </div>
+    </div>
   </div>
 
   <div class="modal-bg" id="modal-rem" onclick="fecharModalRemFora(event)">
@@ -179,7 +226,9 @@
         <div class="item-lancado">
           <div class="il-esq">
             <div class="il-nome"><span style="font-variant-numeric:tabular-nums;font-family:monospace;font-size:11px;color:var(--texto-sub);margin-right:6px">${cod4(item.codigoProduto)}</span>${item.nomeProduto}<span class="badge-item ${badgeClass(item.statusItem)}">${badgeTexto(item.statusItem)}</span></div>
-            <div class="il-sub">${item.quantidade} un × ${fmt(item.precoProduto)}${item.observacao?' · '+item.observacao:''}</div>
+            <div class="il-sub">${item.quantidade} un × ${fmt(item.precoProduto)}</div>
+            ${item.observacao?`<div class="il-obs">${item.observacao}</div>`:''}
+            ${(item.adicionais&&item.adicionais.length)?item.adicionais.map(a=>`<div class="il-adic">+ ${a.nome} · ${fmt(a.valor)}</div>`).join(''):''}
           </div>
           <div class="il-dir">
             <div class="il-total">${fmt((item.quantidade||0)*(item.precoProduto||0))}</div>
@@ -303,6 +352,93 @@
         btn.disabled=false;
       }catch(e){alert('Erro: '+e.message);btn.disabled=false;btn.textContent='📤 Cozinha';}
     };
+    let mpProd=null, mpQtd=1, mpAdics=[];
+
+    function mpRecalcTotal(){
+      if(!mpProd) return;
+      const totalAdics=mpAdics.reduce((s,a)=>s+(a.valor||0),0);
+      const total=mpProd.preco*mpQtd+totalAdics*mpQtd;
+      document.getElementById('mp-total').textContent=fmt(total);
+    }
+
+    window.abrirModalProd=function(prod){
+      mpProd=prod; mpQtd=1; mpAdics=[];
+      document.getElementById('mp-titulo').textContent=prod.nome;
+      document.getElementById('mp-preco').textContent=fmt(prod.preco)+' / '+prod.unidade;
+      document.getElementById('mp-qtd').textContent=1;
+      document.getElementById('mp-obs').value='';
+      document.getElementById('mp-adicionais').innerHTML='';
+      mpRecalcTotal();
+      document.getElementById('modal-prod').classList.add('visivel');
+    };
+
+    window.fecharModalProd=function(){
+      document.getElementById('modal-prod').classList.remove('visivel');
+      mpProd=null;
+    };
+
+    window.fecharModalProdFora=function(e){
+      if(e.target===document.getElementById('modal-prod')) window.fecharModalProd();
+    };
+
+    window.mpAlterarQtd=function(d){
+      mpQtd=Math.max(1,mpQtd+d);
+      document.getElementById('mp-qtd').textContent=mpQtd;
+      mpRecalcTotal();
+    };
+
+    window.mpAddAdic=function(){
+      const idx=mpAdics.length;
+      mpAdics.push({nome:'',valor:0});
+      const el=document.createElement('div');
+      el.className='adic-row';
+      el.id='adic-row-'+idx;
+      el.innerHTML=`
+        <input class="adic-nome" placeholder="ex: Bacon extra" oninput="mpNomeAdic(${idx},this.value)">
+        <div class="adic-valor-row">
+          <span class="adic-valor-label">Valor do adicional</span>
+          <div class="adic-ctrl">
+            <button class="adic-btn" onclick="mpValAdic(${idx},-1)">−</button>
+            <span class="adic-val-num" id="adic-val-${idx}">R$ 0,00</span>
+            <button class="adic-btn" onclick="mpValAdic(${idx},1)">+</button>
+          </div>
+        </div>`;
+      document.getElementById('mp-adicionais').appendChild(el);
+    };
+
+    window.mpNomeAdic=function(idx,v){ mpAdics[idx].nome=v; };
+
+    window.mpValAdic=function(idx,d){
+      mpAdics[idx].valor=Math.max(0,mpAdics[idx].valor+d);
+      document.getElementById('adic-val-'+idx).textContent=fmt(mpAdics[idx].valor);
+      mpRecalcTotal();
+    };
+
+    window.confirmarModalProd=async function(){
+      if(!mpProd) return;
+      const obs=document.getElementById('mp-obs').value.trim();
+      const adics=mpAdics.filter(a=>a.nome.trim());
+      const totalAdics=adics.reduce((s,a)=>s+(a.valor||0),0);
+      const precoFinal=mpProd.preco+totalAdics;
+      await addDoc(collection(db,'comandas',comandaId,'itens'),{
+        produtoId:    mpProd.id,
+        codigoProduto:mpProd.codigo,
+        nomeProduto:  mpProd.nome,
+        precoProduto: precoFinal,
+        precoBase:    mpProd.preco,
+        adicionais:   adics,
+        quantidade:   mpQtd,
+        observacao:   obs,
+        statusItem:   'pendente',
+        adicionadoEm: serverTimestamp()
+      });
+      qtdMap[mpProd.id]=(qtdMap[mpProd.id]||0)+mpQtd;
+      const el=document.getElementById('qtd-'+mpProd.id);
+      if(el) el.textContent=qtdMap[mpProd.id];
+      window.fecharModalProd();
+      trocarAba('itens');
+    };
+
     window.irParaCaixa=function(){
       if (itensAtual.length===0){alert('A comanda está vazia. Adicione ao menos um item antes de fechar.');return;}
       window.location.href='caixa.html?id='+comandaId;

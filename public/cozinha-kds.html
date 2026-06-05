@@ -29,7 +29,13 @@
     .loading-wrap{text-align:center;padding:60px;color:var(--texto-sub);font-size:13px}
 
     /* CARD COMANDA */
-    .card{background:var(--bege-card);border-radius:14px;border:1.5px solid var(--borda);overflow:hidden;transition:border-color .3s,box-shadow .3s}
+    .card{background:var(--bege-card);border-radius:14px;border:1.5px solid var(--borda);overflow:hidden;transition:border-color .3s,box-shadow .3s;position:relative}
+    .sino-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(255,253,249,.15);backdrop-filter:blur(1px);z-index:10;cursor:pointer;border-radius:14px}
+    .sino-circle{width:90px;height:90px;border-radius:50%;background:#F5A623;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(245,166,35,.6);animation:sinoBell .4s ease-in-out infinite alternate,sinoPulse 1.5s ease-in-out infinite}
+    .sino-circle svg{width:52px;height:52px;stroke:#fff;fill:none;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+    @keyframes sinoBell{0%{transform:rotate(-22deg)}100%{transform:rotate(22deg)}}
+    @keyframes sinoPulse{0%,100%{box-shadow:0 4px 20px rgba(245,166,35,.6)}50%{box-shadow:0 4px 40px rgba(245,166,35,.9)}}
+    .sino-label{font-size:12px;color:#7A5700;font-weight:500;background:#FEF7E0;padding:4px 14px;border-radius:20px;border:1px solid #E2D9CC}
     .card.atencao{border-color:var(--amarelo);box-shadow:0 0 0 2px rgba(184,134,11,.12);background:rgba(184,134,11,.08)}
     .card.urgente{border-color:var(--vermelho);box-shadow:0 0 0 3px rgba(192,57,43,.15);background:rgba(192,57,43,.08)}
 
@@ -50,6 +56,8 @@
     .item-row:last-child{border-bottom:none}
     .item-cod{font-size:11px;font-family:monospace;color:var(--texto-sub);min-width:38px;font-weight:500}
     .item-nome{font-size:13px;color:var(--texto);flex:1;font-weight:500;text-transform:uppercase;letter-spacing:.02em}
+    .item-obs{font-size:11px;color:var(--vermelho);font-style:italic;margin-top:2px}
+    .item-adic{font-size:11px;color:var(--verde);margin-top:1px;font-weight:500}
 
     .status-circle{width:30px;height:30px;border-radius:50%;border:2px solid #C8BFB5;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
     .status-circle.oculto{visibility:hidden;pointer-events:none}
@@ -143,7 +151,7 @@
 
     let timers={}, comandaProblema=null, processando=false;
     // Mapa de estado dos círculos: { 'comandaId-itemId-unidade': 'verde'|'vermelho'|'' }
-    const estadoCirculos={};
+    const estadoCirculos={}, sinosDispensados=new Set();
 
     onAuthStateChanged(auth,async(user)=>{
       if(!user){window.location.href='index.html';return;}
@@ -210,7 +218,11 @@
               return `
               <div class="item-row" data-item-id="${item.id}" data-unidade="${idx}">
                 <span class="item-cod">${cod}</span>
-                <span class="item-nome">${item.nomeProduto}</span>
+                <div style="flex:1">
+                  <div class="item-nome">${item.nomeProduto}</div>
+                  ${item.observacao?`<div class="item-obs">⚠ ${item.observacao}</div>`:''}
+                  ${(item.adicionais&&item.adicionais.length)?item.adicionais.filter(a=>a.nome).map(a=>`<div class="item-adic">+ ${a.nome}</div>`).join(''):''}
+                </div>
                 <div class="${classeCirculo}" data-key="${key}" onclick="toggleCirculo(this)">
                   <svg class="ic-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                   <svg class="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -229,8 +241,19 @@
             ? '<span class="badge badge-fazendo">Fazendo</span>'
             : '<span class="badge badge-novo">Novo</span>';
 
+          const sinoHtml=classe==='urgente'&&!sinosDispensados.has(c.id)?`
+            <div class="sino-overlay" id="sino-${c.id}" onclick="dispensarSino('${c.id}')">
+              <div class="sino-circle">
+                <svg viewBox="0 0 24 24">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+              </div>
+              <span class="sino-label">Toque para parar</span>
+            </div>`:'';
           return `
             <div class="card ${classe}" id="card-${c.id}">
+              ${sinoHtml}
               <div class="card-header">
                 <div>
                   <div class="ch-titulo">${c.identificacao}</div>
@@ -274,6 +297,11 @@
 
     function fmtSeg(s){const m=Math.floor(s/60),sec=s%60;return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');}
 
+    window.dispensarSino=function(id){
+      sinosDispensados.add(id);
+      const sino=document.getElementById('sino-'+id);
+      if(sino) sino.style.display='none';
+    };
     window.toggleCirculo=function(el){
       if(el.classList.contains('verde')){el.classList.remove('verde');el.classList.add('vermelho');}
       else if(el.classList.contains('vermelho')){el.classList.remove('vermelho');}
