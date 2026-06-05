@@ -151,7 +151,7 @@
     });
 
     function escutarComandas(){
-      const q=query(collection(db,'comandas'),where('status','==','aberta'),where('enviadoParaCozinha','==',true));
+      const q=query(collection(db,'comandas'),where('status','==','em_producao'));
       onSnapshot(q,async(snap)=>{
         const comandas=snap.docs.map(d=>({id:d.id,...d.data()}));
         comandas.sort((a,b)=>(a.enviadoEm?.seconds||0)-(b.enviadoEm?.seconds||0));
@@ -295,6 +295,7 @@
       await updateDoc(doc(db,'comandas',id),{
         status:'pronto',
         statusCozinha:'pronto',
+        enviadoParaCozinha:false,
         prontoEm:serverTimestamp()
       });
     };
