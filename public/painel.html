@@ -179,7 +179,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, query, where, onSnapshot, addDoc, deleteDoc, getDocs, serverTimestamp, doc, getDoc }
+    import { getFirestore, collection, query, where, onSnapshot, addDoc, deleteDoc, getDocs, updateDoc, serverTimestamp, doc, getDoc }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = { apiKey:"AIzaSyCuDpg9yufiKQ_p_KDR2PcY32K8Xh0H_nM", authDomain:"comandas-89c57.firebaseapp.com", projectId:"comandas-89c57", storageBucket:"comandas-89c57.firebasestorage.app", messagingSenderId:"885510017154", appId:"1:885510027154:web:2c7df4579fe5396de5649b" };
@@ -280,7 +280,7 @@
       });
     }
     window.dispensarAlerta=async function(id){
-      await updateDoc(doc(db,'comandas',id),{statusCozinha:'dispensado'});
+      await updateDoc(doc(db,'comandas',id),{statusCozinha:'dispensado',problemaDescricao:null});
     };
     window.filtrar=function(btn){
       document.querySelectorAll('.filtro').forEach(b=>b.classList.remove('ativo'));
