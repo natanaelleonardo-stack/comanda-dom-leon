@@ -201,7 +201,7 @@
     });
 
     function escutarComandas() {
-      const q=query(collection(db,'comandas'),where('status','==','aberta'));
+      const q=query(collection(db,'comandas'),where('status','in',['aberta','em_producao','pronto','entregue']));
       onSnapshot(q,(snap)=>{
         todasComandas=snap.docs.map(d=>({id:d.id,...d.data()}));
         todasComandas.sort((a,b)=>(b.abertaEm?.seconds||0)-(a.abertaEm?.seconds||0));
@@ -225,9 +225,18 @@
       lista.innerHTML=filtradas.map(c=>{
         const mins=c.abertaEm?Math.floor((Date.now()-c.abertaEm.seconds*1000)/60000):0;
         const tempo=mins<60?mins+' min':Math.floor(mins/60)+'h '+(mins%60)+'min';
-        let cor='verde',badgeClass='badge-verde',badgeTexto='Aberta';
-        if (mins>40){cor='vermelho';badgeClass='badge-vermelho';badgeTexto='Aguardando';}
-        else if (mins>20){cor='amarelo';badgeClass='badge-amarelo';badgeTexto='Em andamento';}
+        // Cor da borda por tempo
+        let cor='verde';
+        if (mins>40) cor='vermelho';
+        else if (mins>20) cor='amarelo';
+
+        // Badge por status
+        let badgeClass='badge-verde',badgeTexto='Aberta';
+        if (c.status==='em_producao'){badgeClass='badge-amarelo';badgeTexto='Na cozinha';}
+        else if (c.status==='pronto'){badgeClass='badge-verde';badgeTexto='Pronto ✓';}
+        else if (c.status==='entregue'){badgeClass='badge-amarelo';badgeTexto='Entregue';}
+        else if (mins>40){badgeClass='badge-vermelho';badgeTexto='Aguardando';}
+        else if (mins>20){badgeClass='badge-amarelo';badgeTexto='Em andamento';}
         const total=(c.total||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
         const lixeira=isGerente?`<button class="btn-lixeira" onclick="event.stopPropagation();pedirExcluir('${c.id}','${c.identificacao.replace(/'/g,"\\'")}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`:'';
         return `<div class="item ${cor}">
@@ -252,7 +261,7 @@
         where('statusCozinha','in',['pronto','problema','rejeitado'])
       );
       onSnapshot(q,(snap)=>{
-        const alertas=snap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>c.statusCozinha!=='dispensado');
+        const alertas=snap.docs.map(d=>({id:d.id,...d.data()}));
         const wrap=document.getElementById('alertas-wrap');
         if(alertas.length===0){wrap.style.display='none';wrap.innerHTML='';return;}
         wrap.style.display='block';
@@ -268,7 +277,7 @@
             ?(c.problemaDescricao?'Problema: '+c.problemaDescricao:'Cozinha rejeitou — verificar')
             :'Pronto para entregar ao cliente';
           const btnOk=!isProblema?`<button class="alerta-ok-btn" onclick="event.stopPropagation();dispensarAlerta('${c.id}')">Ok</button>`:'';
-          return `<div class="alerta-item ${tipo}" onclick="abrirComanda('${c.id}')">
+          return `<div class="alerta-item ${tipo}" id="alerta-${c.id}" onclick="abrirComanda('${c.id}')">
             <div class="alerta-icon" style="background:${cor}">${icon}</div>
             <div style="flex:1">
               <div class="alerta-nome">${c.identificacao} — ${isProblema?'Atenção':'Pronto! ✓'}</div>
@@ -279,8 +288,11 @@
         }).join('');
       });
     }
-    window.dispensarAlerta=async function(id){
-      await updateDoc(doc(db,'comandas',id),{statusCozinha:'dispensado',problemaDescricao:null});
+    window.dispensarAlerta=function(id){
+      const el=document.getElementById('alerta-'+id);
+      if(el) el.remove();
+      const wrap=document.getElementById('alertas-wrap');
+      if(wrap&&wrap.querySelectorAll('.alerta-item').length===0) wrap.style.display='none';
     };
     window.filtrar=function(btn){
       document.querySelectorAll('.filtro').forEach(b=>b.classList.remove('ativo'));

@@ -50,6 +50,8 @@
     .item-nome{font-size:13px;color:var(--texto);flex:1;font-weight:500}
 
     .status-circle{width:30px;height:30px;border-radius:50%;border:2px solid #C8BFB5;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+    .status-circle.oculto{visibility:hidden;pointer-events:none}
+    .card-hint.oculto{display:none}
     .status-circle:hover{border-color:var(--texto-sub);transform:scale(1.05)}
     .status-circle.verde{border-color:var(--verde);background:var(--verde)}
     .status-circle.vermelho{border-color:var(--vermelho);background:var(--vermelho)}
@@ -149,7 +151,7 @@
     });
 
     function escutarComandas(){
-      const q=query(collection(db,'comandas'),where('status','==','em_producao'));
+      const q=query(collection(db,'comandas'),where('status','==','aberta'),where('enviadoParaCozinha','==',true));
       onSnapshot(q,async(snap)=>{
         const comandas=snap.docs.map(d=>({id:d.id,...d.data()}));
         comandas.sort((a,b)=>(a.enviadoEm?.seconds||0)-(b.enviadoEm?.seconds||0));
@@ -189,11 +191,12 @@
           // Expandir itens por unidade
           const linhas=itens.flatMap(item=>{
             const cod=item.codigoProduto?String(item.codigoProduto).slice(-4).padStart(4,'0'):'----';
+            const circuloOculto=!fazendo?' oculto':'';
             return Array.from({length:item.quantidade||1},(_,i)=>`
               <div class="item-row" data-item-id="${item.id}" data-unidade="${i}">
                 <span class="item-cod">${cod}</span>
                 <span class="item-nome">${item.nomeProduto}</span>
-                <div class="status-circle" onclick="toggleCirculo(this)">
+                <div class="status-circle${circuloOculto}" onclick="toggleCirculo(this)">
                   <svg class="ic-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                   <svg class="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </div>
@@ -228,7 +231,7 @@
                 </div>
               </div>
               <div class="card-itens">${linhas}</div>
-              <div class="card-hint">Toque no círculo para marcar ✓ ok ou ✕ problema</div>
+              <div class="card-hint${fazendo?'':' oculto'}">Toque no círculo para marcar ✓ ok ou ✕ problema</div>
               <div class="card-acoes">${acoes}</div>
             </div>`;
         }).join('');
@@ -264,12 +267,19 @@
 
     window.marcarFazendo=async function(id,btn){
       await updateDoc(doc(db,'comandas',id),{statusCozinha:'fazendo'});
+      // Revelar círculos e hint imediatamente no card
+      const card=document.getElementById('card-'+id);
+      if(card){
+        card.querySelectorAll('.status-circle.oculto').forEach(el=>el.classList.remove('oculto'));
+        const hint=card.querySelector('.card-hint');
+        if(hint) hint.classList.remove('oculto');
+      }
     };
 
     window.marcarPronto=async function(id){
       await updateDoc(doc(db,'comandas',id),{
-        status:'pronto',
         statusCozinha:'pronto',
+        enviadoParaCozinha:false,
         prontoEm:serverTimestamp()
       });
     };
@@ -277,8 +287,8 @@
     window.rejeitar=async function(id){
       if(!confirm('Rejeitar esta comanda? Ela voltará para o atendente.')) return;
       await updateDoc(doc(db,'comandas',id),{
-        status:'aberta',
         statusCozinha:'rejeitado',
+        enviadoParaCozinha:false,
         enviadoEm:null
       });
     };
@@ -305,8 +315,8 @@
       const texto=document.getElementById('prob-texto').value.trim();
       if(!texto){document.getElementById('prob-texto').focus();return;}
       await updateDoc(doc(db,'comandas',comandaProblema),{
-        status:'aberta',
         statusCozinha:'problema',
+        enviadoParaCozinha:false,
         problemaDescricao:texto,
         problemaEm:serverTimestamp(),
         enviadoEm:null
