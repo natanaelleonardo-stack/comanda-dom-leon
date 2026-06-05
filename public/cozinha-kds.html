@@ -139,6 +139,8 @@
     const LIMITE_ATENCAO=600, LIMITE_URGENTE=1200; // 10min / 20min em segundos
 
     let timers={}, comandaProblema=null;
+    // Mapa de estado dos círculos: { 'comandaId-itemId-unidade': 'verde'|'vermelho'|'' }
+    const estadoCirculos={};
 
     onAuthStateChanged(auth,async(user)=>{
       if(!user){window.location.href='index.html';return;}
@@ -194,15 +196,21 @@
           const linhas=itens.flatMap(item=>{
             const cod=item.codigoProduto?String(item.codigoProduto).slice(-4).padStart(4,'0'):'----';
             const circuloOculto=!fazendo?' oculto':'';
-            return Array.from({length:item.quantidade||1},(_,i)=>`
-              <div class="item-row" data-item-id="${item.id}" data-unidade="${i}">
+            return Array.from({length:item.quantidade||1},(_,idx)=>{
+              const key=`${c.id}-${item.id}-${idx}`;
+              // K15: restaurar estado visual salvo antes do rerender
+              const estadoSalvo=estadoCirculos[key]||'';
+              const classeCirculo=`status-circle${circuloOculto}${estadoSalvo?' '+estadoSalvo:''}`;
+              return `
+              <div class="item-row" data-item-id="${item.id}" data-unidade="${idx}">
                 <span class="item-cod">${cod}</span>
                 <span class="item-nome">${item.nomeProduto}</span>
-                <div class="status-circle${circuloOculto}" onclick="toggleCirculo(this)">
+                <div class="${classeCirculo}" data-key="${key}" onclick="toggleCirculo(this)">
                   <svg class="ic-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                   <svg class="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </div>
-              </div>`);
+              </div>`;
+            });
           }).join('');
           const acoes=fazendo
             ? `<button class="btn-acao btn-pronto" onclick="marcarPronto('${c.id}')">Pronto ✓</button>
@@ -263,17 +271,20 @@
       if(el.classList.contains('verde')){el.classList.remove('verde');el.classList.add('vermelho');}
       else if(el.classList.contains('vermelho')){el.classList.remove('vermelho');}
       else{el.classList.add('verde');}
+      // Salvar estado para preservar no rerender
+      const key=el.dataset.key;
+      if(key) estadoCirculos[key]=el.classList.contains('verde')?'verde':el.classList.contains('vermelho')?'vermelho':'';
     };
 
     window.marcarFazendo=async function(id,btn){
-      await updateDoc(doc(db,'comandas',id),{statusCozinha:'fazendo'});
-      // Revelar círculos e hint imediatamente no card
+      // Revelar círculos imediatamente no DOM antes do Firestore responder
       const card=document.getElementById('card-'+id);
       if(card){
         card.querySelectorAll('.status-circle.oculto').forEach(el=>el.classList.remove('oculto'));
         const hint=card.querySelector('.card-hint');
         if(hint) hint.classList.remove('oculto');
       }
+      await updateDoc(doc(db,'comandas',id),{statusCozinha:'fazendo'});
     };
 
     window.marcarPronto=async function(id){
