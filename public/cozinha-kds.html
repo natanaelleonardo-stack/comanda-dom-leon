@@ -173,10 +173,10 @@
         lista.innerHTML='<div class="loading-wrap">Carregando itens...</div>';
 
         const cards=await Promise.all(comandas.map(async c=>{
-          const itensSnap=await getDocs(
-            query(collection(db,'comandas',c.id,'itens'),where('statusItem','in',['enviado','em_producao']))
-          );
-          const itens=itensSnap.docs.map(d=>({id:d.id,...d.data()}));
+          const itensSnap=await getDocs(collection(db,'comandas',c.id,'itens'));
+          const itens=itensSnap.docs
+            .map(d=>({id:d.id,...d.data()}))
+            .filter(i=>!i.statusItem||i.statusItem==='enviado'||i.statusItem==='em_producao');
           return {comanda:c, itens};
         }));
 
