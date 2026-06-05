@@ -30,8 +30,8 @@
 
     /* CARD COMANDA */
     .card{background:var(--bege-card);border-radius:14px;border:1.5px solid var(--borda);overflow:hidden;transition:border-color .3s,box-shadow .3s}
-    .card.atencao{border-color:var(--amarelo);box-shadow:0 0 0 2px rgba(184,134,11,.12)}
-    .card.urgente{border-color:var(--vermelho);box-shadow:0 0 0 3px rgba(192,57,43,.15)}
+    .card.atencao{border-color:var(--amarelo);box-shadow:0 0 0 2px rgba(184,134,11,.12);background:rgba(184,134,11,.08)}
+    .card.urgente{border-color:var(--vermelho);box-shadow:0 0 0 3px rgba(192,57,43,.15);background:rgba(192,57,43,.08)}
 
     .card-header{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--borda)}
     .ch-esq{}
@@ -70,6 +70,7 @@
     .btn-acao:active{opacity:.8}
     .btn-fazendo{background:var(--marrom);color:var(--bege)}
     .btn-pronto{background:var(--verde);color:#fff}
+    .btn-pronto:disabled{background:#C8BFB5;cursor:not-allowed;opacity:.6}
     .btn-problema{background:#FEF7E0;color:#7A5700;border:1px solid #E2D9CC}
     .btn-rejeitar{background:#FDECEA;color:#8B1A1A;border:1px solid #F5C4C4}
 
@@ -140,7 +141,7 @@
     const COR_VERDE='#2D7A4F', COR_AMARELO='#B8860B', COR_VERMELHO='#C0392B';
     const LIMITE_ATENCAO=600, LIMITE_URGENTE=1200; // 10min / 20min em segundos
 
-    let timers={}, comandaProblema=null;
+    let timers={}, comandaProblema=null, processando=false;
     // Mapa de estado dos círculos: { 'comandaId-itemId-unidade': 'verde'|'vermelho'|'' }
     const estadoCirculos={};
 
@@ -157,6 +158,9 @@
     function escutarComandas(){
       const q=query(collection(db,'comandas'),where('status','==','em_producao'));
       onSnapshot(q,async(snap)=>{
+        if(processando) return; // K19: evitar execuções simultâneas
+        processando=true;
+        try{
         const comandas=snap.docs.map(d=>({id:d.id,...d.data()}));
         comandas.sort((a,b)=>(a.enviadoEm?.seconds||0)-(b.enviadoEm?.seconds||0));
         document.getElementById('header-sub').textContent=
@@ -215,7 +219,7 @@
             });
           }).join('');
           const acoes=fazendo
-            ? `<button class="btn-acao btn-pronto" onclick="marcarPronto('${c.id}')">Pronto ✓</button>
+            ? `<button class="btn-acao btn-pronto" id="pronto-${c.id}" onclick="marcarPronto('${c.id}')" disabled>Pronto ✓</button>
                <button class="btn-acao btn-problema" onclick="abrirProblema('${c.id}','${c.identificacao.replace(/'/g,"\\'")}')">Problema</button>`
             : `<button class="btn-acao btn-fazendo" onclick="marcarFazendo('${c.id}',this)">Fazendo</button>
                <button class="btn-acao btn-problema" onclick="abrirProblema('${c.id}','${c.identificacao.replace(/'/g,"\\'")}')">Problema</button>
@@ -264,6 +268,7 @@
             if(cd){cd.className='card '+classe;}
           },1000);
         });
+        } finally { processando=false; }
       });
     }
 
@@ -276,6 +281,14 @@
       // Salvar estado para preservar no rerender
       const key=el.dataset.key;
       if(key) estadoCirculos[key]=el.classList.contains('verde')?'verde':el.classList.contains('vermelho')?'vermelho':'';
+      // K21 — verificar se todos os círculos do card estão marcados
+      const card=el.closest('.card');
+      if(!card) return;
+      const cmdId=card.id.replace('card-','');
+      const todos=card.querySelectorAll('.status-circle:not(.oculto)');
+      const todosMarcados=[...todos].every(c=>c.classList.contains('verde')||c.classList.contains('vermelho'));
+      const btnPronto=document.getElementById('pronto-'+cmdId);
+      if(btnPronto) btnPronto.disabled=!todosMarcados;
     };
 
     window.marcarFazendo=async function(id,btn){
@@ -285,6 +298,9 @@
         card.querySelectorAll('.status-circle.oculto').forEach(el=>el.classList.remove('oculto'));
         const hint=card.querySelector('.card-hint');
         if(hint) hint.classList.remove('oculto');
+        // K21 — pronto começa desabilitado pois círculos estão em branco
+        const btnPronto=document.getElementById('pronto-'+id);
+        if(btnPronto) btnPronto.disabled=true;
       }
       await updateDoc(doc(db,'comandas',id),{statusCozinha:'fazendo'});
     };
