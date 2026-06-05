@@ -188,6 +188,8 @@
           const classe=decorrido<LIMITE_ATENCAO?'':decorrido<LIMITE_URGENTE?'atencao':'urgente';
           const lbl=decorrido<LIMITE_ATENCAO?'tranquilo':decorrido<LIMITE_URGENTE?'atenção':'urgente';
 
+          const fazendo=c.statusCozinha==='fazendo';
+
           // Expandir itens por unidade
           const linhas=itens.flatMap(item=>{
             const cod=item.codigoProduto?String(item.codigoProduto).slice(-4).padStart(4,'0'):'----';
@@ -202,8 +204,6 @@
                 </div>
               </div>`);
           }).join('');
-
-          const fazendo=c.statusCozinha==='fazendo';
           const acoes=fazendo
             ? `<button class="btn-acao btn-pronto" onclick="marcarPronto('${c.id}')">Pronto ✓</button>
                <button class="btn-acao btn-problema" onclick="abrirProblema('${c.id}','${c.identificacao.replace(/'/g,"\\'")}')">Problema</button>`
