@@ -274,6 +274,7 @@
                   <div class="pi-preco">${fmt(p.preco)} / ${p.unidade||'un'}</div>
                 </div>
                 <div class="pi-ctrl">
+                  <button style="background:none;border:none;padding:4px;cursor:pointer;color:#C0392B;display:flex;align-items:center" onclick='abrirModalProd({"id":"${p.id}","nome":"${p.nome.replace(/"/g,"'")}","preco":${p.preco},"unidade":"${p.unidade||"un"}","codigo":"${p.codigo||""}"})' title="Obs / Adicionais"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                   <button class="ctrl-btn" onclick="alterarQtd('${p.id}',-1,${p.preco},'${p.nome.replace(/'/g,"\\'")}','${p.unidade||'un'}','${p.codigo||''}')">−</button>
                   <span class="ctrl-qtd" id="qtd-${p.id}">0</span>
                   <button class="ctrl-btn add" onclick="alterarQtd('${p.id}',1,${p.preco},'${p.nome.replace(/'/g,"\\'")}','${p.unidade||'un'}','${p.codigo||''}')">+</button>
