@@ -372,12 +372,22 @@
       const itens=snap.data().itens||[];
       const incs={};
       itens.forEach(i=>{
+        if(i.produto==='avulso') return; // ignorar avulsos
         const prod=PRODUTOS.find(p=>p.id===i.produto);
-        const eid=prod?.estoqueId||i.produto;
-        const un=prod?.unidades||1;
+        if(!prod) return;
+        const eid=prod.estoqueId;
+        const un=prod.unidades||1;
         if(!incs[eid]) incs[eid]=0;
         incs[eid]-=i.quantidade*un;
       });
+      // Garantir campos numéricos antes do increment
+      const snapEst=await getDoc(docEstoque);
+      const estD=snapEst.exists()?snapEst.data():{};
+      const initD={};
+      Object.keys(incs).forEach(k=>{
+        if(!estD[k]||typeof estD[k].reservado!=='number') initD[k]={disponivel:Number(estD[k]?.disponivel)||0,reservado:0};
+      });
+      if(Object.keys(initD).length) await setDoc(docEstoque,initD,{merge:true});
       const upd={};
       Object.entries(incs).forEach(([k,v])=>{upd[`${k}.reservado`]=increment(v);});
       if(Object.keys(upd).length) await updateDoc(docEstoque,upd);
@@ -474,8 +484,31 @@
         Object.entries(incsR).forEach(([k,v])=>{upd[`${k}.reservado`]=increment(v);});
         const forma=document.getElementById('r-forma').value;
         const troco=forma==='dinheiro'?parseFloat(document.getElementById('r-troco').value)||0:null;
-        const dadosReserva={cliente:{nome,telefone:tel,endereco:tipo==='entrega'?end:null},tipo,pago,forma:forma||null,troco,itens};
+          const dadosReserva={cliente:{nome,telefone:tel,endereco:tipo==='entrega'?end:null},tipo,pago,forma:forma||null,troco,itens};
         if(editId){
+          // Buscar itens antigos para recalcular diferença no estoque
+          const snapAnt=await getDoc(doc(db,'assados_reservas',editId));
+          const itensAntigos=snapAnt.exists()?snapAnt.data().itens||[]:[];
+          // Calcular diferença: novos - antigos
+          const diffEstoque={};
+          itensAntigos.forEach(i=>{
+            const prod=PRODUTOS.find(p=>p.id===i.produto);
+            if(!prod||i.produto==='avulso') return;
+            const eid=prod.estoqueId; const un=prod.unidades||1;
+            if(!diffEstoque[eid]) diffEstoque[eid]=0;
+            diffEstoque[eid]-=i.quantidade*un; // remover antigos
+          });
+          itens.forEach(i=>{
+            const prod=PRODUTOS.find(p=>p.id===i.produto);
+            if(!prod||i.produto==='avulso') return;
+            const eid=prod.estoqueId; const un=prod.unidades||1;
+            if(!diffEstoque[eid]) diffEstoque[eid]=0;
+            diffEstoque[eid]+=i.quantidade*un; // adicionar novos
+          });
+          // Aplicar diferença no estoque
+          const updEst={};
+          Object.entries(diffEstoque).forEach(([k,v])=>{if(v!==0) updEst[`${k}.reservado`]=increment(v);});
+          if(Object.keys(updEst).length) await updateDoc(docEstoque,updEst);
           await updateDoc(doc(db,'assados_reservas',editId),dadosReserva);
         } else {
           await addDoc(collection(db,'assados_reservas'),{...dadosReserva,status:'encomendado',criadoEm:serverTimestamp()});
