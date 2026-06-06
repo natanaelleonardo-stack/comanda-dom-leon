@@ -157,6 +157,9 @@
   <div class="modal-bg" id="modal-reserva" onclick="fecharModalFora(event,'modal-reserva')">
     <div class="modal">
       <div class="modal-titulo">Nova reserva</div>
+      <div class="campo"><label>Data da reserva</label>
+        <input type="date" id="r-data" style="font-family:'DM Sans',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--borda);border-radius:10px;background:var(--bege);color:var(--texto);outline:none;width:100%;color-scheme:light">
+      </div>
       <div class="campo"><label>Nome do cliente</label><input type="text" id="r-nome" placeholder="ex: João Silva"></div>
       <div class="campo"><label>Telefone</label><input type="tel" id="r-tel" placeholder="(15) 99999-0000" oninput="mascaraTel(this)" maxlength="15"></div>
       <div class="campo"><label>Tipo</label>
@@ -413,6 +416,8 @@
       const r=snap.data();
       qtdSel={};
       (r.itens||[]).forEach(i=>{qtdSel[i.produto]=i.quantidade;});
+      const dataReserva=r.criadoEm?.toDate?r.criadoEm.toDate().toISOString().slice(0,10):dataSelecionada;
+      document.getElementById('r-data').value=dataReserva;
       document.getElementById('r-nome').value=r.cliente?.nome||'';
       document.getElementById('r-tel').value=r.cliente?.telefone||'';
       document.getElementById('r-tipo').value=r.tipo||'retirada';
@@ -468,6 +473,7 @@
     window.abrirModalReserva=function(){
       qtdSel={};
       ['r-nome','r-tel','r-end','r-troco'].forEach(i=>document.getElementById(i).value='');
+      document.getElementById('r-data').value=dataSelecionada;
       document.getElementById('r-forma').value='';
       document.getElementById('campo-troco').classList.remove('visivel');
       document.getElementById('avulsos-sel').innerHTML=''; avulsoCount=0;
@@ -570,19 +576,23 @@
           await updateDoc(doc(db,'assados_reservas',editId),dadosReserva);
         } else {
           // Nova reserva — descontar estoque
-          const snapE=await getDoc(docEstoque);
+          const dataReservaEscolhida=document.getElementById('r-data').value||dataSelecionada;
+          const docEstoqueReserva=doc(db,'assados_estoque',dataReservaEscolhida);
+          const snapE=await getDoc(docEstoqueReserva);
           const estD=snapE.exists()?snapE.data():{};
           const initD={};
           Object.keys(incsR).forEach(k=>{
             if(!estD[k]||typeof estD[k].reservado!=='number') initD[k]={disponivel:Number(estD[k]?.disponivel)||0,reservado:0};
           });
-          if(Object.keys(initD).length) await setDoc(docEstoque,initD,{merge:true});
+          if(Object.keys(initD).length) await setDoc(docEstoqueReserva,initD,{merge:true});
           const upd={};
           Object.entries(incsR).forEach(([k,v])=>{upd[`${k}.reservado`]=increment(v);});
-          if(Object.keys(upd).length) await updateDoc(docEstoque,upd);
-          await addDoc(collection(db,'assados_reservas'),{...dadosReserva,status:'encomendado',criadoEm:serverTimestamp()});
+          if(Object.keys(upd).length) await updateDoc(docEstoqueReserva,upd);
+          const dataEscolhida=document.getElementById('r-data').value||dataSelecionada;
+          const [y,m,d]=dataEscolhida.split('-').map(Number);
+          const tsReserva=new Date(y,m-1,d,new Date().getHours(),new Date().getMinutes());
+          await addDoc(collection(db,'assados_reservas'),{...dadosReserva,status:'encomendado',criadoEm:tsReserva});
         }
-        if(Object.keys(upd).length) await updateDoc(docEstoque,upd);
         fecharModal('modal-reserva');
       }catch(e){alert('Erro: '+e.message);}
       btn.disabled=false;btn.textContent='Confirmar reserva';
