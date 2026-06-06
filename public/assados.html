@@ -270,7 +270,7 @@
     function renderEstoque(){
       const grid=document.getElementById('estoque-grid');
       // Só exibe produtos que foram iniciados no dia (existem no Firestore)
-      const itensVisiveis=ESTOQUE_ITENS.filter(p=>estoqueAtual[p.id]!==undefined);
+      const itensVisiveis=ESTOQUE_ITENS.filter(p=>estoqueAtual[p.id]!==undefined&&estoqueAtual[p.id]?.oculto!==true);
       if(itensVisiveis.length===0){
         grid.innerHTML='<div style="text-align:center;padding:20px;color:var(--texto-sub);font-size:13px">Estoque do dia ainda não foi configurado.<br>Toque em ✏️ Editar para começar.</div>';
         return;
@@ -348,7 +348,7 @@
         return `<div class="reserva-card">
           <div class="rc-header">
             <div class="rc-linha1">${linha1}</div>
-            <div class="rc-linha2" style="margin-top:6px">${linha2}</div>
+            <div class="rc-linha2">${linha2}</div>
           </div>
           <div class="rc-itens">${itens}</div>
         </div>`;
@@ -510,9 +510,17 @@
       const el=document.getElementById('estoque-inputs');
       el.innerHTML=ESTOQUE_ITENS.map(p=>{
         const disp=estoqueAtual[p.id]?.disponivel||0;
-        return `<div class="estoque-input-row">
-          <span class="ei-label">${p.nome}</span>
-          <input class="ei-input" type="number" min="0" value="${disp}" id="ei-${p.id}">
+        const oculto=estoqueAtual[p.id]?.oculto===true;
+        const toggleVis=oculto?`<div class="toggle-visivel">
+          <input type="checkbox" id="vis-${p.id}" checked>
+          <label for="vis-${p.id}">Exibir no painel</label>
+        </div>`:'';
+        return `<div class="estoque-input-row" style="flex-direction:column;align-items:stretch;gap:6px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span class="ei-label">${p.nome}${oculto?' <span style="font-size:10px;color:var(--vermelho)">(oculto)</span>':''}</span>
+            <input class="ei-input" type="number" min="0" value="${disp}" id="ei-${p.id}">
+          </div>
+          ${toggleVis}
         </div>`;
       }).join('');
       document.getElementById('modal-estoque').classList.add('visivel');
@@ -522,13 +530,20 @@
       const dados={};
       ESTOQUE_ITENS.forEach(p=>{
         const val=parseInt(document.getElementById('ei-'+p.id)?.value)||0;
-        const res=estoqueAtual[p.id]?.reservado||0;
-        dados[p.id]={disponivel:val,reservado:res};
+        const res=Number(estoqueAtual[p.id]?.reservado)||0;
+        const visCheck=document.getElementById('vis-'+p.id);
+        // Se tinha toggle de visibilidade e está marcado para exibir, remover oculto
+        const oculto=estoqueAtual[p.id]?.oculto===true;
+        const exibir=visCheck?visCheck.checked:true;
+        dados[p.id]={disponivel:val,reservado:res,...(oculto&&exibir?{oculto:false}:oculto?{oculto:true}:{})};
       });
       await setDoc(docEstoque,dados,{merge:true});
       fecharModal('modal-estoque');
     };
 
+    window.ocultarItem=async function(id){
+      await updateDoc(docEstoque,{[`${id}.oculto`]:true});
+    };
     window.fecharModal=function(id){document.getElementById(id).classList.remove('visivel');};
     window.fecharModalFora=function(e,id){if(e.target===document.getElementById(id))window.fecharModal(id);};
 
