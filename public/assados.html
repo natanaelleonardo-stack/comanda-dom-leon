@@ -464,28 +464,37 @@
           status:'encomendado',
           criadoEm:serverTimestamp()
         });
-        // Descontar estoque — usando estoqueId e multiplicando por unidades
-        const updates={};
+        // Calcular total a descontar por estoqueId
+        const incsReserva={};
         itens.forEach(i=>{
           const prod=PRODUTOS.find(p=>p.id===i.produto);
           const estoqueId=prod?.estoqueId||i.produto;
           const unidades=prod?.unidades||1;
-          updates[`${estoqueId}.reservado`]=(updates[`${estoqueId}.reservado`]||{operand:0});
-          // Somar incrementos do mesmo estoqueId
-          if(!updates[`${estoqueId}._inc`]) updates[`${estoqueId}._inc`]=0;
-          updates[`${estoqueId}._inc`]+=i.quantidade*unidades;
+          if(!incsReserva[estoqueId]) incsReserva[estoqueId]=0;
+          incsReserva[estoqueId]+=i.quantidade*unidades;
         });
+        // Garantir que o campo reservado existe (inicializar com 0 se necessário)
+        const snapEst=await getDoc(docEstoque);
+        const estDados=snapEst.exists()?snapEst.data():{};
+        const initUpdates={};
+        Object.keys(incsReserva).forEach(k=>{
+          if(estDados[k]===undefined||estDados[k].reservado===undefined){
+            initUpdates[`${k}.reservado`]=0;
+          }
+        });
+        if(Object.keys(initUpdates).length) await updateDoc(docEstoque,initUpdates).catch(async()=>{
+          await setDoc(docEstoque,{},{ merge:true });
+          await updateDoc(docEstoque,initUpdates);
+        });
+        // Agora incrementar com segurança
         const updatesFinal={};
-        Object.entries(updates).forEach(([k,v])=>{
-          if(k.endsWith('._inc')) updatesFinal[k.replace('._inc','.reservado')]=increment(v);
-        });
-        await updateDoc(docEstoque,updates).catch(async()=>{
-          // Se doc não existe, criar primeiro
-          const ini={};
-          PRODUTOS.forEach(p=>{ini[p.id]={disponivel:0,reservado:0};});
-          await setDoc(docEstoque,ini,{merge:true});
-          await updateDoc(docEstoque,updates);
-        });
+        Object.entries(incsReserva).forEach(([k,v])=>{updatesFinal[`${k}.reservado`]=increment(v);});
+        if(Object.keys(updatesFinal).length){
+          await updateDoc(docEstoque,updatesFinal).catch(async()=>{
+            await setDoc(docEstoque,{},{merge:true});
+            await updateDoc(docEstoque,updatesFinal);
+          });
+        }
         fecharModal('modal-reserva');
       }catch(e){alert('Erro: '+e.message);}
       btn.disabled=false;btn.textContent='Confirmar reserva';
