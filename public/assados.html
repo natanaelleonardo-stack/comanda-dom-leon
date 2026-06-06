@@ -29,17 +29,20 @@
     .secao-titulo{font-size:11px;font-weight:500;color:var(--texto-sub);text-transform:uppercase;letter-spacing:.06em}
     .btn-editar{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--borda);background:var(--bege-card);color:var(--marrom);cursor:pointer;font-family:'DM Sans',sans-serif}
 
-    .estoque-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px}
-    @media(min-width:600px){.estoque-grid{grid-template-columns:repeat(5,1fr)}}
-    .estoque-item{background:var(--bege-card);border-radius:10px;border:1px solid var(--borda);padding:10px 8px;text-align:center;cursor:pointer;transition:border-color .15s}
-    .estoque-item:hover{border-color:var(--marrom)}
-    .estoque-item.zerado{background:#FDECEA;border-color:#F5C4C4}
-    .estoque-item.baixo{background:#FEF7E0;border-color:var(--borda)}
-    .ei-nome{font-size:9px;color:var(--texto-sub);text-transform:uppercase;letter-spacing:.04em;line-height:1.3;margin-bottom:4px;min-height:24px;display:flex;align-items:center;justify-content:center}
-    .ei-saldo{font-size:22px;font-weight:500;color:var(--marrom);line-height:1}
-    .ei-total{font-size:9px;color:var(--texto-sub);margin-top:2px}
-    .estoque-item.zerado .ei-saldo{color:var(--vermelho)}
-    .estoque-item.baixo .ei-saldo{color:var(--amarelo)}
+    .estoque-grid{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+    .estoque-item{background:var(--bege-card);border-radius:10px;border:1px solid var(--borda);padding:10px 14px}
+    .estoque-item.zerado{}
+    .estoque-item.baixo{}
+    .ei-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .ei-nome{font-size:13px;font-weight:500;color:var(--texto)}
+    .ei-nums{font-size:12px;color:var(--texto-sub)}
+    .ei-nums strong{color:var(--marrom)}
+    .estoque-item.zerado .ei-nums strong{color:var(--vermelho)}
+    .estoque-item.baixo .ei-nums strong{color:var(--amarelo)}
+    .ei-progress{height:6px;background:var(--borda);border-radius:3px;overflow:hidden}
+    .ei-bar{height:100%;border-radius:3px;background:var(--marrom);transition:width .3s}
+    .estoque-item.zerado .ei-bar{background:var(--vermelho)}
+    .estoque-item.baixo .ei-bar{background:var(--amarelo)}
 
     /* FILTROS */
     .filtros-wrap{overflow-x:auto;margin-bottom:10px}
@@ -268,15 +271,24 @@
 
     function renderEstoque(){
       const grid=document.getElementById('estoque-grid');
-      grid.innerHTML=ESTOQUE_ITENS.map(p=>{
+      // Só exibe produtos que foram iniciados no dia (existem no Firestore)
+      const itensVisiveis=ESTOQUE_ITENS.filter(p=>estoqueAtual[p.id]!==undefined);
+      if(itensVisiveis.length===0){
+        grid.innerHTML='<div style="text-align:center;padding:20px;color:var(--texto-sub);font-size:13px">Estoque do dia ainda não foi configurado.<br>Toque em ✏️ Editar para começar.</div>';
+        return;
+      }
+      grid.innerHTML=itensVisiveis.map(p=>{
         const disp=estoqueAtual[p.id]?.disponivel||0;
         const res=estoqueAtual[p.id]?.reservado||0;
-        const saldo=disp-res;
-        const cls=saldo<=0?'zerado':saldo<=2?'baixo':'';
+        const saldo=Math.max(0,disp-res);
+        const pct=disp>0?Math.round((saldo/disp)*100):0;
+        const cls=saldo<=0?'zerado':pct<=30?'baixo':'';
         return `<div class="estoque-item ${cls}">
-          <div class="ei-nome">${p.nome}</div>
-          <div class="ei-saldo">${Math.max(0,saldo)}</div>
-          <div class="ei-total">de ${disp}</div>
+          <div class="ei-top">
+            <span class="ei-nome">${p.nome}</span>
+            <span class="ei-nums"><strong>${saldo}</strong> / ${disp}${p.id==='coxa_sobrecoxa'?' un':''}</span>
+          </div>
+          <div class="ei-progress"><div class="ei-bar" style="width:${pct}%"></div></div>
         </div>`;
       }).join('');
     }
