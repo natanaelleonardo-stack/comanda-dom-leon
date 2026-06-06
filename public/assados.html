@@ -489,18 +489,19 @@
         const res=Number(estoqueAtual[p.estoqueId]?.reservado)||0;
         const saldoUn=Math.max(0,disp-res);
         const saldoP=Math.floor(saldoUn/p.unidades);
-        const esgotado=saldoP<=0;
         qtdSel[p.id]=qtdSel[p.id]||0;
         const saldoLabel=p.unidades>1?`Saldo: ${saldoP} porções (${saldoUn} un)`:`Saldo: ${saldoUn}`;
-        return `<div class="item-sel ${esgotado?'esgotado':''}">
+        const saldoClass=saldoP<=0?'zero':'';
+        const saldoTxt=saldoP<=0?`Esgotado (pode reservar)`:saldoLabel;
+        return `<div class="item-sel">
           <div class="is-info">
             <div class="is-nome">${p.nome}</div>
-            <div class="is-saldo ${esgotado?'zero':''}">${esgotado?'Esgotado':saldoLabel}</div>
+            <div class="is-saldo ${saldoClass}">${saldoTxt}</div>
           </div>
           <div class="is-ctrl">
-            <button class="is-btn" onclick="alterarSel('${p.id}',-1,${saldoP})" ${esgotado?'disabled':''}>−</button>
+            <button class="is-btn" onclick="alterarSel('${p.id}',-1,9999)">−</button>
             <span class="is-qtd" id="sel-${p.id}">0</span>
-            <button class="is-btn" onclick="alterarSel('${p.id}',1,${saldoP})" ${esgotado?'disabled':''}>+</button>
+            <button class="is-btn" onclick="alterarSel('${p.id}',1,9999)">+</button>
           </div>
         </div>`;
       }).join('');
