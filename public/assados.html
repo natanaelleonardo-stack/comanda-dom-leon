@@ -116,13 +116,11 @@
         <div class="header-titulo">Assados Dom Leon</div>
       </div>
     </div>
-    <label for="date-picker" class="header-data-btn" style="position:absolute;left:50%;transform:translateX(-50%);cursor:pointer">
-      <span class="header-data-txt" id="header-data">Carregando...</span>
-      <span class="header-data-arrow">▾</span>
+    <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px">
+      <input type="date" id="date-picker" onchange="trocarData(this.value)"
+        style="background:none;border:none;color:var(--bege);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;text-align:center;-webkit-appearance:none;appearance:none;outline:none;padding:4px 8px;border-radius:8px;min-width:180px">
       <span id="badge-periodo"></span>
-    </label>
-    <input type="date" id="date-picker" onchange="trocarData(this.value)"
-      style="position:absolute;left:50%;transform:translateX(-50%);opacity:0;width:1px;height:1px;overflow:hidden">
+    </div>
     <button class="btn-icon" onclick="window.location.href='home.html'" title="Início">
       <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     </button>
@@ -250,8 +248,8 @@
 
     function atualizarHeaderData(){
       const hoje=new Date().toISOString().slice(0,10);
-      document.getElementById('header-data').textContent=formatarData(dataSelecionada);
-      document.getElementById('date-picker').value=dataSelecionada;
+      const dp=document.getElementById('date-picker');
+      dp.value=dataSelecionada;
       const badge=document.getElementById('badge-periodo');
       if(dataSelecionada<hoje){badge.className='badge-periodo badge-historico';badge.textContent='Histórico';}
       else if(dataSelecionada>hoje){badge.className='badge-periodo badge-planejamento';badge.textContent='Planejamento';}
