@@ -118,7 +118,7 @@
     </div>
     <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px">
       <input type="date" id="date-picker" onchange="trocarData(this.value)"
-        style="background:none;border:none;color:var(--bege);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;text-align:center;-webkit-appearance:none;appearance:none;outline:none;padding:4px 8px;border-radius:8px;min-width:180px">
+        style="background:none;border:none;color:var(--bege);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;text-align:center;-webkit-appearance:none;appearance:none;outline:none;padding:4px 8px;border-radius:8px;min-width:180px;color-scheme:dark">
       <span id="badge-periodo"></span>
     </div>
     <button class="btn-icon" onclick="window.location.href='home.html'" title="Início">
@@ -540,18 +540,9 @@
           if(!incsR[eid]) incsR[eid]=0;
           incsR[eid]+=i.quantidade*un;
         });
-        const snapE=await getDoc(docEstoque);
-        const estD=snapE.exists()?snapE.data():{};
-        const initD={};
-        Object.keys(incsR).forEach(k=>{
-          if(!estD[k]||typeof estD[k].reservado!=='number') initD[k]={disponivel:Number(estD[k]?.disponivel)||0,reservado:0};
-        });
-        if(Object.keys(initD).length) await setDoc(docEstoque,initD,{merge:true});
-        const upd={};
-        Object.entries(incsR).forEach(([k,v])=>{upd[`${k}.reservado`]=increment(v);});
         const forma=document.getElementById('r-forma').value;
         const troco=forma==='dinheiro'?parseFloat(document.getElementById('r-troco').value)||0:null;
-          const dadosReserva={cliente:{nome,telefone:tel,endereco:tipo==='entrega'?end:null},tipo,pago,forma:forma||null,troco,itens};
+        const dadosReserva={cliente:{nome,telefone:tel,endereco:tipo==='entrega'?end:null},tipo,pago,forma:forma||null,troco,itens};
         if(editId){
           // Buscar itens antigos para recalcular diferença no estoque
           const snapAnt=await getDoc(doc(db,'assados_reservas',editId));
@@ -578,6 +569,17 @@
           if(Object.keys(updEst).length) await updateDoc(docEstoque,updEst);
           await updateDoc(doc(db,'assados_reservas',editId),dadosReserva);
         } else {
+          // Nova reserva — descontar estoque
+          const snapE=await getDoc(docEstoque);
+          const estD=snapE.exists()?snapE.data():{};
+          const initD={};
+          Object.keys(incsR).forEach(k=>{
+            if(!estD[k]||typeof estD[k].reservado!=='number') initD[k]={disponivel:Number(estD[k]?.disponivel)||0,reservado:0};
+          });
+          if(Object.keys(initD).length) await setDoc(docEstoque,initD,{merge:true});
+          const upd={};
+          Object.entries(incsR).forEach(([k,v])=>{upd[`${k}.reservado`]=increment(v);});
+          if(Object.keys(upd).length) await updateDoc(docEstoque,upd);
           await addDoc(collection(db,'assados_reservas'),{...dadosReserva,status:'encomendado',criadoEm:serverTimestamp()});
         }
         if(Object.keys(upd).length) await updateDoc(docEstoque,upd);
