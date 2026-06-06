@@ -17,6 +17,14 @@
     .btn-icon{background:none;border:none;cursor:pointer;color:var(--bege);padding:4px;opacity:.85;display:flex;align-items:center}
     .btn-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
     .header-data-btn{background:none;border:none;cursor:pointer;color:var(--bege);font-family:'DM Sans',sans-serif;font-size:13px;display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:8px;transition:background .15s;position:absolute;left:50%;transform:translateX(-50%)}
+    .nav-data-wrap{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px}
+    .btn-nav-data{background:none;border:none;cursor:pointer;color:var(--bege);font-size:18px;padding:4px 8px;border-radius:8px;opacity:.8;transition:opacity .15s;font-family:'DM Sans',sans-serif;line-height:1}
+    .btn-nav-data:hover{opacity:1;background:rgba(255,255,255,.1)}
+    .data-centro{display:flex;flex-direction:column;align-items:center;gap:2px}
+    .data-diaSemana{color:var(--bege);font-size:11px;opacity:.8}
+    .data-principal{display:flex;align-items:center;gap:4px;cursor:pointer}
+    .data-principal-txt{color:var(--bege);font-size:13px;font-weight:500}
+    .data-principal-arrow{color:var(--bege);font-size:10px;opacity:.6}
     .header-data-btn:hover{background:rgba(255,255,255,.1)}
     .header-data-txt{font-weight:500}
     .header-data-arrow{font-size:10px;opacity:.7}
@@ -116,10 +124,18 @@
         <div class="header-titulo">Assados Dom Leon</div>
       </div>
     </div>
-    <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px">
+    <div class="nav-data-wrap">
+      <button class="btn-nav-data" onclick="navegarData(-1)">&#8249;</button>
+      <div class="data-centro">
+        <label class="data-principal" for="date-picker">
+          <span class="data-principal-txt" id="header-data-txt">Carregando...</span>
+          <span class="data-principal-arrow">▾</span>
+        </label>
+        <span id="badge-periodo"></span>
+      </div>
+      <button class="btn-nav-data" onclick="navegarData(1)">&#8250;</button>
       <input type="date" id="date-picker" onchange="trocarData(this.value)"
-        style="background:none;border:none;color:var(--bege);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;text-align:center;-webkit-appearance:none;appearance:none;outline:none;padding:4px 8px;border-radius:8px;min-width:180px;color-scheme:dark">
-      <span id="badge-periodo"></span>
+        style="position:fixed;left:-9999px;opacity:0;width:1px;height:1px;color-scheme:light">
     </div>
     <button class="btn-icon" onclick="window.location.href='home.html'" title="Início">
       <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -253,6 +269,13 @@
       const hoje=new Date().toISOString().slice(0,10);
       const dp=document.getElementById('date-picker');
       dp.value=dataSelecionada;
+      // Atualizar texto com dia da semana e data
+      const [y,m,d]=dataSelecionada.split('-');
+      const dt=new Date(y,m-1,d);
+      const diaSemana=dias[dt.getDay()];
+      const dataFmt=`${d}/${m}/${y}`;
+      const el=document.getElementById('header-data-txt');
+      if(el) el.textContent=`${diaSemana}, ${dataFmt}`;
       const badge=document.getElementById('badge-periodo');
       if(dataSelecionada<hoje){badge.className='badge-periodo badge-historico';badge.textContent='Histórico';}
       else if(dataSelecionada>hoje){badge.className='badge-periodo badge-planejamento';badge.textContent='Planejamento';}
@@ -265,6 +288,13 @@
       document.querySelector('.btn-nova').style.opacity=passado?'.4':'1';
     }
 
+    window.navegarData=function(delta){
+      const [y,m,d]=dataSelecionada.split('-').map(Number);
+      const dt=new Date(y,m-1,d);
+      dt.setDate(dt.getDate()+delta);
+      const nova=dt.toISOString().slice(0,10);
+      window.trocarData(nova);
+    };
     window.trocarData=function(novaData){
       if(!novaData) return;
       dataSelecionada=novaData;
@@ -318,7 +348,7 @@
         const pct=disp>0?Math.max(0,Math.round((saldo/disp)*100)):0;
         const cls=saldo<=0?'zerado':pct<=30?'baixo':'';
         const sufixo=p.id==='coxa_sobrecoxa'?' un':'';
-        const btnOcultar=saldo<=0?`<button class="btn-ocultar" onclick="ocultarItem('${p.id}')">Ocultar</button>`:'';
+        const btnOcultar='';
         return `<div class="estoque-item ${cls}">
           <div class="ei-num">${saldo}</div>
           <div class="ei-info">
