@@ -23,7 +23,7 @@
     .badge-periodo{font-size:9px;font-weight:500;padding:2px 7px;border-radius:20px;margin-left:4px}
     .badge-historico{background:rgba(255,255,255,.15);color:#C9B99A}
     .badge-planejamento{background:rgba(255,200,0,.2);color:#FFD700}
-    input[type="date"]#date-picker{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+
     .corpo{padding:14px}
     .secao-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
     .secao-titulo{font-size:11px;font-weight:500;color:var(--texto-sub);text-transform:uppercase;letter-spacing:.06em}
@@ -116,12 +116,13 @@
         <div class="header-titulo">Assados Dom Leon</div>
       </div>
     </div>
-    <button class="header-data-btn" onclick="document.getElementById('date-picker').click()">
+    <div class="header-data-btn" style="position:absolute;left:50%;transform:translateX(-50%)">
       <span class="header-data-txt" id="header-data">Carregando...</span>
       <span class="header-data-arrow">▾</span>
       <span id="badge-periodo"></span>
-    </button>
-    <input type="date" id="date-picker" onchange="trocarData(this.value)">
+      <input type="date" id="date-picker" onchange="trocarData(this.value)"
+        style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+    </div>
     <button class="btn-icon" onclick="window.location.href='home.html'" title="Início">
       <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     </button>
