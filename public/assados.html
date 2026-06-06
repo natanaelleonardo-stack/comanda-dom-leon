@@ -314,8 +314,8 @@
       grid.innerHTML=visiveis.map(p=>{
         const disp=Number(estoqueAtual[p.id]?.disponivel)||0;
         const res=Number(estoqueAtual[p.id]?.reservado)||0;
-        const saldo=Math.max(0,disp-res);
-        const pct=disp>0?Math.round((saldo/disp)*100):0;
+        const saldo=disp-res; // permite negativo
+        const pct=disp>0?Math.max(0,Math.round((saldo/disp)*100)):0;
         const cls=saldo<=0?'zerado':pct<=30?'baixo':'';
         const sufixo=p.id==='coxa_sobrecoxa'?' un':'';
         const btnOcultar=saldo<=0?`<button class="btn-ocultar" onclick="ocultarItem('${p.id}')">Ocultar</button>`:'';
