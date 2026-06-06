@@ -313,47 +313,44 @@
       const proximoLabel={encomendado:'→ Marcar Pronto',pronto:'→ Marcar Embalado',embalado:null};
 
       el.innerHTML=filtradas.map(r=>{
-        const badges=`
+        const endTxt=r.tipo==='entrega'&&r.cliente?.endereco?` <span class="rc-sep">·</span> <span class="rc-end">📍 ${r.cliente.endereco}</span>`:'';
+
+        const linha1=`
+          <span class="rc-cliente">${r.cliente?.nome||'—'}</span>
+          ${r.cliente?.telefone?`<span class="rc-sep">·</span><span class="rc-tel">${r.cliente.telefone}</span>`:''}
+          ${endTxt}`;
+
+        const linha2=`
           <span class="badge badge-${r.pago?'pago':'npago'}">${r.pago?'Pago':'Não pago'}</span>
           <span class="badge badge-${r.tipo}">${r.tipo==='entrega'?'Entrega':'Retirada'}</span>
           <span class="badge badge-${r.status}">${statusLabel[r.status]||r.status}</span>`;
 
-        const itens=(r.itens||[]).map(i=>{
-          const prod=PRODUTOS.find(p=>p.id===i.produto);
-          return `<div class="rc-item">${i.quantidade}x <span>${prod?.nome||i.produto}</span></div>`;
-        }).join('');
-
-        const end=r.tipo==='entrega'&&r.endereco?`<div class="rc-end">📍 ${r.endereco}</div>`:'';
-
         const btnAvancar=proximoStatus[r.status]?
-          `<button class="btn-acao btn-avancar" onclick="avancarStatus('${r.id}','${r.status}','${r.tipo}')">
-            ${proximoLabel[r.status]}
-          </button>`:'';
-
-        const btnFinalizar=r.status==='embalado'?`
-          <button class="btn-acao btn-avancar" onclick="finalizarReserva('${r.id}','${r.tipo}')">
-            ${r.tipo==='entrega'?'→ Entregue':'→ Retirado'}
-          </button>`:'';
-
+          `<button class="btn-acao btn-avancar" onclick="avancarStatus('${r.id}','${r.status}','${r.tipo}')">${proximoLabel[r.status]}</button>`:'';
+        const btnFinalizar=r.status==='embalado'?
+          `<button class="btn-acao btn-avancar" onclick="finalizarReserva('${r.id}','${r.tipo}')">${r.tipo==='entrega'?'→ Entregue':'→ Retirado'}</button>`:'';
         const btnPago=!r.pago?
           `<button class="btn-acao btn-pago" onclick="marcarPago('${r.id}')">Pago ✓</button>`:'';
-
         const btnCancelar=r.status!=='entregue'&&r.status!=='retirado'?
-          `<button class="btn-acao btn-cancelar-res" onclick="cancelarReserva('${r.id}',${JSON.stringify(r.itens||[])})">Cancelar</button>`:'';
+          `<button class="btn-acao btn-cancelar-res" onclick="cancelarReserva('${r.id}',${JSON.stringify(r.itens||[])})">✕</button>`:'';
+
+        const acoesBtns=`${btnAvancar}${btnFinalizar}${btnPago}${btnCancelar}`;
+
+        const itens=(r.itens||[]).map((item,idx)=>{
+          const prod=PRODUTOS.find(p=>p.id===item.produto);
+          const btns=idx===0?`<div class="item-btns">${acoesBtns}</div>`:'';
+          return `<div class="rc-item-row">
+            <span class="rc-item-txt">${item.quantidade}x <span>${prod?.nome||item.produto}</span></span>
+            ${btns}
+          </div>`;
+        }).join('');
 
         return `<div class="reserva-card">
           <div class="rc-header">
-            <div>
-              <div class="rc-cliente">${r.cliente?.nome||'—'}</div>
-              <div class="rc-tel">${r.cliente?.telefone||''}</div>
-            </div>
-            <div class="rc-badges">${badges}</div>
+            <div class="rc-linha1">${linha1}</div>
+            <div class="rc-linha2">${linha2}</div>
           </div>
           <div class="rc-itens">${itens}</div>
-          ${end}
-          <div class="rc-acoes">
-            ${btnAvancar}${btnFinalizar}${btnPago}${btnCancelar}
-          </div>
         </div>`;
       }).join('');
     }
