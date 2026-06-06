@@ -281,7 +281,7 @@
         const saldo=Math.max(0,disp-res);
         const pct=disp>0?Math.round((saldo/disp)*100):0;
         const cls=saldo<=0?'zerado':pct<=30?'baixo':'';
-        const sufixo=p.id==='coxa_sobrecoxa?' un':'';
+        
         return `<div class="estoque-item ${cls}">
           <div class="ei-num">${saldo}</div>
           <div class="ei-info">
