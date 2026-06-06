@@ -348,7 +348,7 @@
         return `<div class="reserva-card">
           <div class="rc-header">
             <div class="rc-linha1">${linha1}</div>
-            <div class="rc-linha2">${linha2}</div>
+            <div class="rc-linha2" style="margin-top:6px">${linha2}</div>
           </div>
           <div class="rc-itens">${itens}</div>
         </div>`;
@@ -481,20 +481,17 @@
           if(!incsReserva[estoqueId]) incsReserva[estoqueId]=0;
           incsReserva[estoqueId]+=i.quantidade*unidades;
         });
-        // Garantir que o campo reservado existe (inicializar com 0 se necessário)
+        // Garantir campos numéricos com setDoc merge antes do increment
         const snapEst=await getDoc(docEstoque);
         const estDados=snapEst.exists()?snapEst.data():{};
-        const initUpdates={};
+        const initData={};
         Object.keys(incsReserva).forEach(k=>{
-          if(estDados[k]===undefined||estDados[k].reservado===undefined){
-            initUpdates[`${k}.reservado`]=0;
+          if(!estDados[k]||typeof estDados[k].reservado!=='number'){
+            initData[k]={disponivel:Number(estDados[k]?.disponivel)||0, reservado:0};
           }
         });
-        if(Object.keys(initUpdates).length) await updateDoc(docEstoque,initUpdates).catch(async()=>{
-          await setDoc(docEstoque,{},{ merge:true });
-          await updateDoc(docEstoque,initUpdates);
-        });
-        // Agora incrementar com segurança
+        if(Object.keys(initData).length) await setDoc(docEstoque,initData,{merge:true});
+        // Incrementar com segurança
         const updatesFinal={};
         Object.entries(incsReserva).forEach(([k,v])=>{updatesFinal[`${k}.reservado`]=increment(v);});
         if(Object.keys(updatesFinal).length){
