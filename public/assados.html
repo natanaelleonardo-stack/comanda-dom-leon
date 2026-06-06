@@ -219,14 +219,26 @@
     const firebaseConfig={apiKey:"AIzaSyCuDpg9yufiKQ_p_KDR2PcY32K8Xh0H_nM",authDomain:"comandas-89c57.firebaseapp.com",projectId:"comandas-89c57",storageBucket:"comandas-89c57.firebasestorage.app",messagingSenderId:"885510017154",appId:"1:885510017154:web:2c7df4579fe5396de5649b"};
     const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 
+    // Produtos para reserva — porcao_cs consome múltiplas unidades do estoque coxa_sobrecoxa
     const PRODUTOS=[
-      {id:'frango',         nome:'Frango inteiro'},
-      {id:'porcao_cs1',     nome:'Porção C/S c/1'},
-      {id:'porcao_cs3',     nome:'Porção C/S c/3'},
-      {id:'porcao_cs4',     nome:'Porção C/S c/4'},
-      {id:'costela',        nome:'Costela assada'},
-      {id:'cupim',          nome:'Cupim assado'},
-      {id:'joelho',         nome:'Joelho de Porco'},
+      {id:'frango',         nome:'Frango inteiro',        estoqueId:'frango',         unidades:1},
+      {id:'porcao_cs1',     nome:'Porção C/S c/1',        estoqueId:'coxa_sobrecoxa', unidades:1},
+      {id:'porcao_cs3',     nome:'Porção C/S c/3',        estoqueId:'coxa_sobrecoxa', unidades:3},
+      {id:'porcao_cs4',     nome:'Porção C/S c/4',        estoqueId:'coxa_sobrecoxa', unidades:4},
+      {id:'costela',        nome:'Costela assada',         estoqueId:'costela',        unidades:1},
+      {id:'cupim',          nome:'Cupim assado',           estoqueId:'cupim',          unidades:1},
+      {id:'joelho',         nome:'Joelho de Porco',        estoqueId:'joelho',         unidades:1},
+      {id:'lasanha',        nome:'Lasanha',                estoqueId:'lasanha',        unidades:1},
+      {id:'escondidinho',   nome:'Escondidinho',           estoqueId:'escondidinho',   unidades:1},
+    ];
+
+    // Itens de estoque — coxa_sobrecoxa é único controlado em unidades
+    const ESTOQUE_ITENS=[
+      {id:'frango',         nome:'Frango'},
+      {id:'coxa_sobrecoxa', nome:'Coxa/Sobrecoxa (un)'},
+      {id:'costela',        nome:'Costela'},
+      {id:'cupim',          nome:'Cupim'},
+      {id:'joelho',         nome:'Joelho'},
       {id:'lasanha',        nome:'Lasanha'},
       {id:'escondidinho',   nome:'Escondidinho'},
     ];
@@ -256,7 +268,7 @@
 
     function renderEstoque(){
       const grid=document.getElementById('estoque-grid');
-      grid.innerHTML=PRODUTOS.map(p=>{
+      grid.innerHTML=ESTOQUE_ITENS.map(p=>{
         const disp=estoqueAtual[p.id]?.disponivel||0;
         const res=estoqueAtual[p.id]?.reservado||0;
         const saldo=disp-res;
@@ -365,11 +377,17 @@
 
     window.cancelarReserva=async function(id,itens){
       if(!confirm('Cancelar esta reserva? O estoque será devolvido.')) return;
-      // Devolver saldo
-      const updates={};
+      // Devolver saldo — usando estoqueId e multiplicando por unidades
+      const incs={};
       (itens||[]).forEach(i=>{
-        updates[`${i.produto}.reservado`]=increment(-i.quantidade);
+        const prod=PRODUTOS.find(p=>p.id===i.produto);
+        const estoqueId=prod?.estoqueId||i.produto;
+        const unidades=prod?.unidades||1;
+        if(!incs[estoqueId]) incs[estoqueId]=0;
+        incs[estoqueId]-=i.quantidade*unidades;
       });
+      const updates={};
+      Object.entries(incs).forEach(([k,v])=>{updates[`${k}.reservado`]=increment(v);});
       if(Object.keys(updates).length) await updateDoc(docEstoque,updates);
       await deleteDoc(doc(db,'assados_reservas',id));
     };
@@ -390,20 +408,23 @@
     function renderItensSel(){
       const el=document.getElementById('itens-sel');
       el.innerHTML=PRODUTOS.map(p=>{
-        const disp=estoqueAtual[p.id]?.disponivel||0;
-        const res=estoqueAtual[p.id]?.reservado||0;
-        const saldo=Math.max(0,disp-res);
-        const esgotado=saldo<=0;
+        const disp=estoqueAtual[p.estoqueId]?.disponivel||0;
+        const res=estoqueAtual[p.estoqueId]?.reservado||0;
+        const saldoUn=Math.max(0,disp-res);
+        // Saldo em porções = quantas porções cabem com as unidades disponíveis
+        const saldoPorcoes=Math.floor(saldoUn/p.unidades);
+        const esgotado=saldoPorcoes<=0;
         qtdSel[p.id]=qtdSel[p.id]||0;
+        const saldoLabel=p.unidades>1?`Saldo: ${saldoPorcoes} porções (${saldoUn} un)`:`Saldo: ${saldoUn}`;
         return `<div class="item-sel ${esgotado?'esgotado':''}">
           <div class="is-info">
             <div class="is-nome">${p.nome}</div>
-            <div class="is-saldo ${esgotado?'zero':''}">${esgotado?'Esgotado':'Saldo: '+saldo}</div>
+            <div class="is-saldo ${esgotado?'zero':''}">${esgotado?'Esgotado':saldoLabel}</div>
           </div>
           <div class="is-ctrl">
-            <button class="is-btn" onclick="alterarSel('${p.id}',-1,${saldo})" ${esgotado?'disabled':''}>−</button>
+            <button class="is-btn" onclick="alterarSel('${p.id}',-1,${saldoPorcoes})" ${esgotado?'disabled':''}>−</button>
             <span class="is-qtd" id="sel-${p.id}">${qtdSel[p.id]||0}</span>
-            <button class="is-btn" onclick="alterarSel('${p.id}',1,${saldo})" ${esgotado?'disabled':''}>+</button>
+            <button class="is-btn" onclick="alterarSel('${p.id}',1,${saldoPorcoes})" ${esgotado?'disabled':''}>+</button>
           </div>
         </div>`;
       }).join('');
@@ -443,9 +464,21 @@
           status:'encomendado',
           criadoEm:serverTimestamp()
         });
-        // Descontar estoque
+        // Descontar estoque — usando estoqueId e multiplicando por unidades
         const updates={};
-        itens.forEach(i=>{updates[`${i.produto}.reservado`]=increment(i.quantidade);});
+        itens.forEach(i=>{
+          const prod=PRODUTOS.find(p=>p.id===i.produto);
+          const estoqueId=prod?.estoqueId||i.produto;
+          const unidades=prod?.unidades||1;
+          updates[`${estoqueId}.reservado`]=(updates[`${estoqueId}.reservado`]||{operand:0});
+          // Somar incrementos do mesmo estoqueId
+          if(!updates[`${estoqueId}._inc`]) updates[`${estoqueId}._inc`]=0;
+          updates[`${estoqueId}._inc`]+=i.quantidade*unidades;
+        });
+        const updatesFinal={};
+        Object.entries(updates).forEach(([k,v])=>{
+          if(k.endsWith('._inc')) updatesFinal[k.replace('._inc','.reservado')]=increment(v);
+        });
         await updateDoc(docEstoque,updates).catch(async()=>{
           // Se doc não existe, criar primeiro
           const ini={};
@@ -461,7 +494,7 @@
     // MODAL ESTOQUE
     window.abrirModalEstoque=function(){
       const el=document.getElementById('estoque-inputs');
-      el.innerHTML=PRODUTOS.map(p=>{
+      el.innerHTML=ESTOQUE_ITENS.map(p=>{
         const disp=estoqueAtual[p.id]?.disponivel||0;
         return `<div class="estoque-input-row">
           <span class="ei-label">${p.nome}</span>
@@ -473,7 +506,7 @@
 
     window.salvarEstoque=async function(){
       const dados={};
-      PRODUTOS.forEach(p=>{
+      ESTOQUE_ITENS.forEach(p=>{
         const val=parseInt(document.getElementById('ei-'+p.id)?.value)||0;
         const res=estoqueAtual[p.id]?.reservado||0;
         dados[p.id]={disponivel:val,reservado:res};
