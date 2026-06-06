@@ -31,8 +31,8 @@
     .estoque-item.zerado .ei-num{color:var(--vermelho)}
     .estoque-item.baixo .ei-num{color:var(--amarelo)}
     .ei-info{flex:1}
-    .ei-nome{font-size:12px;font-weight:500;color:var(--texto)}
-    .ei-total{font-size:10px;color:var(--texto-sub);margin-top:2px}
+    .ei-nome{font-size:14px;font-weight:500;color:var(--texto)}
+    .ei-total{font-size:12px;color:var(--texto-sub);margin-top:2px}
     .btn-ocultar{font-size:10px;margin-top:4px;padding:2px 8px;border-radius:6px;border:1px solid var(--borda);background:none;color:var(--texto-sub);cursor:pointer;font-family:'DM Sans',sans-serif;display:block}
     /* FILTROS */
     .filtros-wrap{overflow-x:auto;margin-bottom:10px}
@@ -129,6 +129,7 @@
         <button class="filtro" onclick="filtrar(this,'pronto')">Pronto</button>
         <button class="filtro" onclick="filtrar(this,'embalado')">Embalado</button>
         <button class="filtro" onclick="filtrar(this,'entregue')">Entregue/Retirado</button>
+        <button class="filtro" onclick="filtrar(this,'delivery')">Delivery</button>
       </div>
     </div>
     <div id="lista-reservas"><div class="loading-wrap">Carregando...</div></div>
@@ -140,7 +141,7 @@
     <div class="modal">
       <div class="modal-titulo">Nova reserva</div>
       <div class="campo"><label>Nome do cliente</label><input type="text" id="r-nome" placeholder="ex: João Silva"></div>
-      <div class="campo"><label>Telefone</label><input type="tel" id="r-tel" placeholder="15 99999-0000"></div>
+      <div class="campo"><label>Telefone</label><input type="tel" id="r-tel" placeholder="(15) 99999-0000" oninput="mascaraTel(this)" maxlength="15"></div>
       <div class="campo"><label>Tipo</label>
         <select id="r-tipo" onchange="toggleEndereco()">
           <option value="retirada">Retirada na loja</option>
@@ -151,8 +152,21 @@
       <div class="campo"><label>Pagamento</label>
         <select id="r-pago"><option value="false">Não pago</option><option value="true">Pago</option></select>
       </div>
+      <div class="campo"><label>Forma de pagamento</label>
+        <select id="r-forma" onchange="toggleTroco()">
+          <option value="">Não informado</option>
+          <option value="dinheiro">Dinheiro</option>
+          <option value="debito">Débito</option>
+          <option value="credito">Crédito</option>
+          <option value="pix">PIX</option>
+        </select>
+      </div>
+      <div class="campo campo-oculto" id="campo-troco"><label>Troco para</label><input type="number" id="r-troco" placeholder="ex: 50.00" min="0" step="0.01"></div>
       <div style="font-size:11px;font-weight:500;color:var(--texto-sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Itens</div>
       <div id="itens-sel"></div>
+      <div style="font-size:11px;font-weight:500;color:var(--texto-sub);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 8px">Itens avulsos</div>
+      <div id="avulsos-sel"></div>
+      <button onclick="addAvulso()" style="font-size:12px;padding:7px 14px;border-radius:8px;border:1.5px dashed var(--borda);background:none;color:var(--texto-sub);cursor:pointer;font-family:'DM Sans',sans-serif;width:100%;margin-bottom:8px">+ Adicionar item avulso</button>
       <div class="modal-btns">
         <button class="btn-cancelar" onclick="fecharModal('modal-reserva')">Cancelar</button>
         <button class="btn-confirmar" id="btn-confirmar-res" onclick="confirmarReserva()">Confirmar reserva</button>
@@ -250,6 +264,7 @@
       const el=document.getElementById('lista-reservas');
       const filtradas=filtroAtivo==='todos'?todasReservas:
         filtroAtivo==='entregue'?todasReservas.filter(r=>r.status==='entregue'||r.status==='retirado'):
+        filtroAtivo==='delivery'?todasReservas.filter(r=>r.tipo==='entrega'):
         todasReservas.filter(r=>r.status===filtroAtivo);
       if(filtradas.length===0){el.innerHTML='<div class="vazio">Nenhuma reserva encontrada</div>';return;}
 
@@ -272,14 +287,16 @@
         const btnFin=r.status==='embalado'?`<button class="btn-acao btn-avancar" onclick="finalizarReserva('${r.id}','${r.tipo}')">
           ${r.tipo==='entrega'?'→ Entregue':'→ Retirado'}</button>`:'';
         const btnPago=!r.pago?`<button class="btn-acao btn-pago" onclick="marcarPago('${r.id}')">Pago ✓</button>`:'';
-        const btnCan=r.status!=='entregue'&&r.status!=='retirado'?`<button class="btn-acao btn-cancelar-res" onclick="cancelarReserva('${r.id}',${JSON.stringify(r.itens||[])})">✕</button>`:'';
-        const acoes=`${btnAv}${btnFin}${btnPago}${btnCan}`;
+        const btnCan=r.status!=='entregue'&&r.status!=='retirado'?`<button class="btn-acao btn-cancelar-res" onclick="pedirCancelar('${r.id}')">✕</button>`:'';
+        const btnEdit=r.status!=='entregue'&&r.status!=='retirado'?`<button class="btn-acao" style="background:#F5F0E8;border:1px solid #E2D9CC;color:#3B2314" onclick="editarReserva('${r.id}')">✏️</button>`:'';
+        const acoes=`${btnAv}${btnFin}${btnPago}${btnEdit}${btnCan}`;
 
         const itens=(r.itens||[]).map((item,idx)=>{
           const prod=PRODUTOS.find(p=>p.id===item.produto);
+          const nomeExib=item.produto==='avulso'?item.nomeAvulso:prod?.nome||item.produto;
           const btns=idx===0?`<div class="item-btns">${acoes}</div>`:'';
           return `<div class="rc-item-row">
-            <span class="rc-item-txt">${item.quantidade}x <span>${prod?.nome||item.produto}</span></span>
+            <span class="rc-item-txt">${item.quantidade}x <span>${nomeExib}</span></span>
             ${btns}
           </div>`;
         }).join('');
@@ -323,6 +340,49 @@
       if(Object.keys(upd).length) await updateDoc(docEstoque,upd);
       await deleteDoc(doc(db,'assados_reservas',id));
     };
+    window.editarReserva=async function(id){
+      const snap=await getDoc(doc(db,'assados_reservas',id));
+      if(!snap.exists()) return;
+      const r=snap.data();
+      qtdSel={};
+      (r.itens||[]).forEach(i=>{qtdSel[i.produto]=i.quantidade;});
+      document.getElementById('r-nome').value=r.cliente?.nome||'';
+      document.getElementById('r-tel').value=r.cliente?.telefone||'';
+      document.getElementById('r-tipo').value=r.tipo||'retirada';
+      document.getElementById('r-end').value=r.cliente?.endereco||'';
+      document.getElementById('r-pago').value=r.pago?'true':'false';
+      document.getElementById('r-forma').value=r.forma||'';
+      document.getElementById('r-troco').value=r.troco||'';
+      document.getElementById('campo-endereco').classList.toggle('visivel',r.tipo==='entrega');
+      document.getElementById('campo-troco').classList.toggle('visivel',r.forma==='dinheiro');
+      renderItensSel();
+      // Marcar quantidades já salvas
+      Object.entries(qtdSel).forEach(([pid,q])=>{
+        const el=document.getElementById('sel-'+pid);
+        if(el) el.textContent=q;
+      });
+      // Guardar ID para update
+      document.getElementById('modal-reserva').dataset.editId=id;
+      document.getElementById('modal-reserva').classList.add('visivel');
+    };
+    window.pedirCancelar=async function(id){
+      if(!confirm('Cancelar esta reserva? O estoque será devolvido.')) return;
+      const snap=await getDoc(doc(db,'assados_reservas',id));
+      if(!snap.exists()) return;
+      const itens=snap.data().itens||[];
+      const incs={};
+      itens.forEach(i=>{
+        const prod=PRODUTOS.find(p=>p.id===i.produto);
+        const eid=prod?.estoqueId||i.produto;
+        const un=prod?.unidades||1;
+        if(!incs[eid]) incs[eid]=0;
+        incs[eid]-=i.quantidade*un;
+      });
+      const upd={};
+      Object.entries(incs).forEach(([k,v])=>{upd[`${k}.reservado`]=increment(v);});
+      if(Object.keys(upd).length) await updateDoc(docEstoque,upd);
+      await deleteDoc(doc(db,'assados_reservas',id));
+    };
     window.ocultarItem=async function(id){
       await updateDoc(docEstoque,{[`${id}.oculto`]:true});
     };
@@ -330,7 +390,10 @@
     // MODAL RESERVA
     window.abrirModalReserva=function(){
       qtdSel={};
-      ['r-nome','r-tel','r-end'].forEach(i=>document.getElementById(i).value='');
+      ['r-nome','r-tel','r-end','r-troco'].forEach(i=>document.getElementById(i).value='');
+      document.getElementById('r-forma').value='';
+      document.getElementById('campo-troco').classList.remove('visivel');
+      document.getElementById('avulsos-sel').innerHTML=''; avulsoCount=0;
       document.getElementById('r-tipo').value='retirada';
       document.getElementById('r-pago').value='false';
       document.getElementById('campo-endereco').classList.remove('visivel');
@@ -364,10 +427,14 @@
       const el=document.getElementById('sel-'+id);
       if(el) el.textContent=qtdSel[id];
     };
+    window.toggleTroco=function(){
+      document.getElementById('campo-troco').classList.toggle('visivel',document.getElementById('r-forma').value==='dinheiro');
+    };
     window.toggleEndereco=function(){
       document.getElementById('campo-endereco').classList.toggle('visivel',document.getElementById('r-tipo').value==='entrega');
     };
     window.confirmarReserva=async function(){
+      const editId=document.getElementById('modal-reserva').dataset.editId||'';
       const nome=document.getElementById('r-nome').value.trim();
       const tel=document.getElementById('r-tel').value.trim();
       const tipo=document.getElementById('r-tipo').value;
@@ -375,6 +442,14 @@
       const pago=document.getElementById('r-pago').value==='true';
       if(!nome){alert('Informe o nome.');return;}
       const itens=Object.entries(qtdSel).filter(([,q])=>q>0).map(([produto,quantidade])=>({produto,quantidade}));
+      // Coletar avulsos
+      const avulsosEl=document.getElementById('avulsos-sel');
+      avulsosEl.querySelectorAll('[id^="avulso-"]').forEach(row=>{
+        const idx=row.id.replace('avulso-','');
+        const nome=document.getElementById('av-nome-'+idx)?.value.trim();
+        const qtd=parseInt(document.getElementById('av-qtd-'+idx)?.value)||1;
+        if(nome) itens.push({produto:'avulso',nomeAvulso:nome,quantidade:qtd});
+      });
       if(!itens.length){alert('Selecione ao menos um item.');return;}
       const btn=document.getElementById('btn-confirmar-res');
       btn.disabled=true;btn.textContent='Salvando...';
@@ -397,10 +472,14 @@
         if(Object.keys(initD).length) await setDoc(docEstoque,initD,{merge:true});
         const upd={};
         Object.entries(incsR).forEach(([k,v])=>{upd[`${k}.reservado`]=increment(v);});
-        await addDoc(collection(db,'assados_reservas'),{
-          cliente:{nome,telefone:tel,endereco:tipo==='entrega'?end:null},
-          tipo,pago,itens,status:'encomendado',criadoEm:serverTimestamp()
-        });
+        const forma=document.getElementById('r-forma').value;
+        const troco=forma==='dinheiro'?parseFloat(document.getElementById('r-troco').value)||0:null;
+        const dadosReserva={cliente:{nome,telefone:tel,endereco:tipo==='entrega'?end:null},tipo,pago,forma:forma||null,troco,itens};
+        if(editId){
+          await updateDoc(doc(db,'assados_reservas',editId),dadosReserva);
+        } else {
+          await addDoc(collection(db,'assados_reservas'),{...dadosReserva,status:'encomendado',criadoEm:serverTimestamp()});
+        }
         if(Object.keys(upd).length) await updateDoc(docEstoque,upd);
         fecharModal('modal-reserva');
       }catch(e){alert('Erro: '+e.message);}
@@ -434,7 +513,29 @@
       fecharModal('modal-estoque');
     };
 
-    window.fecharModal=function(id){document.getElementById(id).classList.remove('visivel');};
+    let avulsoCount=0;
+    window.addAvulso=function(){
+      const idx=avulsoCount++;
+      const el=document.createElement('div');
+      el.style.cssText='display:flex;gap:6px;align-items:center;margin-bottom:6px';
+      el.id='avulso-'+idx;
+      el.innerHTML=`
+        <input type="text" placeholder="Nome do item" id="av-nome-${idx}" style="flex:1;font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;border:1.5px solid var(--borda);border-radius:8px;background:var(--bege);color:var(--texto);outline:none">
+        <input type="number" placeholder="Qtd" id="av-qtd-${idx}" min="1" value="1" style="width:60px;font-family:'DM Sans',sans-serif;font-size:13px;padding:8px;border:1.5px solid var(--borda);border-radius:8px;background:var(--bege);color:var(--texto);outline:none;text-align:center">
+        <button onclick="document.getElementById('avulso-${idx}').remove()" style="background:none;border:none;cursor:pointer;color:var(--vermelho);font-size:18px;padding:4px">✕</button>`;
+      document.getElementById('avulsos-sel').appendChild(el);
+    };
+    window.mascaraTel=function(el){
+      let v=el.value.replace(/\D/g,'');
+      if(v.length<=10) v=v.replace(/(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3');
+      else v=v.replace(/(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3');
+      el.value=v;
+    };
+    window.fecharModal=function(id){
+      const el=document.getElementById(id);
+      el.classList.remove('visivel');
+      if(el.dataset.editId) delete el.dataset.editId;
+    };
     window.fecharModalFora=function(e,id){if(e.target===document.getElementById(id))window.fecharModal(id);};
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){fecharModal('modal-reserva');fecharModal('modal-estoque');}});
   </script>
